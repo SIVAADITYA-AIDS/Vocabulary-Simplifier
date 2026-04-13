@@ -32,14 +32,19 @@ const sessionsCollection = db.collection('sessions');
 
 // AI Analysis (Unchanged)
 app.post('/api/analyze', async (req, res) => {
-  const { text } = req.body;
+  const { text, theme } = req.body;
   if (!text || text.length < 20) return res.status(400).json({ error: "Text too short." });
 
   try {
+    const themePrompt = theme && theme !== 'General' 
+      ? `Focus the definitions and context strongly around the domain of ${theme}. ` 
+      : '';
+
     const prompt = `
       You are an advanced vocabulary extraction tool. 
       Read the following text and extract the most difficult, complex, or advanced vocabulary words. 
       Limit the extraction to a maximum of 15 words.
+      ${themePrompt}
       For each word, provide:
       1. The word itself (term)
       2. A concise definition based on how it is used in the text
@@ -68,6 +73,33 @@ app.post('/api/analyze', async (req, res) => {
   } catch (error) {
     console.error("Error during AI analysis:", error);
     res.status(500).json({ error: "AI analysis failed. Please check the server logs for more details." });
+  }
+});
+
+// NEW: Contextual Story Generation
+app.post('/api/story', async (req, res) => {
+  const { words } = req.body;
+  if (!words || !Array.isArray(words) || words.length === 0) {
+    return res.status(400).json({ error: "No words provided to generate a story." });
+  }
+
+  try {
+    const prompt = `
+      Write a short, engaging paragraph or very short story (maximum 150 words) 
+      that correctly integrates all of the following vocabulary words:
+      ${words.join(', ')}.
+      Make the context clear enough so the meaning of the words is reinforced. 
+      Do not use any markdown formatting, just return plain text.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    res.json({ story: response.text });
+  } catch (error) {
+    console.error("Error generating story:", error);
+    res.status(500).json({ error: "Story generation failed." });
   }
 });
 
@@ -100,32 +132,27 @@ app.get('/api/history', async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Must be logged in to view history." });
 
   try {
-    // Find only documents that belong to this user
-    const snapshot = await sessionsCollection.where('userId', '==', userId).get();
+    // Let Firestore do the sorting and limiting to save memory and read costs
+    const snapshot = await sessionsCollection
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
     
     let history = [];
     snapshot.forEach(doc => {
       const data = doc.data();
-      const timestamp = data.createdAt ? data.createdAt.toMillis() : Date.now();
       const dateString = data.createdAt ? data.createdAt.toDate().toLocaleDateString() : new Date().toLocaleDateString();
       
       history.push({
         id: doc.id,
         date: dateString,
-        rawDate: timestamp, // Used for sorting
         snippet: data.snippet,
         words: data.words
       });
     });
 
-    // Sort newest first and limit to 10
-    history.sort((a, b) => b.rawDate - a.rawDate);
-    const finalHistory = history.slice(0, 10).map(item => {
-        delete item.rawDate;
-        return item;
-    });
-
-    res.json(finalHistory);
+    res.json(history);
   } catch (err) {
     console.error("Error fetching history from database:", err);
     res.status(500).json({ error: "Failed to fetch history. Please check the server logs for more details." });

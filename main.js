@@ -49,9 +49,12 @@ const API_BASE = 'http://localhost:3000/api';
 let currentVocabList = [];
 
 // UI Elements
+const themeSelect = document.getElementById('themeSelect');
 const inputText = document.getElementById('inputText');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const sampleBtn = document.getElementById('sampleBtn');
+const generateStoryBtn = document.getElementById('generateStoryBtn');
+const storyContainer = document.getElementById('storyContainer');
 const startQuizBtn = document.getElementById('startQuizBtn');
 const resultsBox = document.getElementById('resultsBox');
 const wordCountBadge = document.getElementById('wordCountBadge');
@@ -69,6 +72,10 @@ function renderResults(vocabArray) {
   wordCountBadge.textContent = `(${vocabArray.length})`;
   startQuizBtn.disabled = false;
   startQuizBtn.classList.remove('opacity-50');
+  generateStoryBtn.disabled = false;
+  generateStoryBtn.classList.remove('opacity-50', 'hidden');
+  storyContainer.classList.add('hidden');
+  storyContainer.textContent = '';
   saveBtn.classList.remove('hidden');
 }
 
@@ -76,6 +83,7 @@ function renderResults(vocabArray) {
 
 analyzeBtn.addEventListener('click', async () => {
   const text = inputText.value.trim();
+  const theme = themeSelect.value;
   if(text.length < 20) return alert("Please enter a longer passage.");
   try {
     analyzeBtn.innerHTML = `Analyzing...`;
@@ -83,15 +91,39 @@ analyzeBtn.addEventListener('click', async () => {
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text, theme })
     });
     currentVocabList = await response.json();
     renderResults(currentVocabList);
   } catch (err) {
     alert("Failed to analyze text.");
   } finally {
-    analyzeBtn.innerHTML = `Analyze with AI`;
+    analyzeBtn.innerHTML = `Analyze`;
     analyzeBtn.disabled = false;
+  }
+});
+
+generateStoryBtn.addEventListener('click', async () => {
+  if (currentVocabList.length === 0) return;
+  
+  generateStoryBtn.textContent = 'Generating...';
+  generateStoryBtn.disabled = true;
+  
+  try {
+    const words = currentVocabList.map(item => item.term);
+    const response = await fetch(`${API_BASE}/story`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words })
+    });
+    const data = await response.json();
+    storyContainer.textContent = data.story;
+    storyContainer.classList.remove('hidden');
+  } catch (err) {
+    alert("Failed to generate contextual story.");
+  } finally {
+    generateStoryBtn.textContent = 'Generate Story';
+    generateStoryBtn.disabled = false;
   }
 });
 

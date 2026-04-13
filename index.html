@@ -85,8 +85,15 @@
           </div>
           <textarea id="inputText" class="input-box flex-grow min-h-[300px] mb-4" placeholder="Paste your text here (min 20 words recommended)..."></textarea>
           <div class="flex gap-3">
-            <button id="analyzeBtn" class="btn-primary flex-1 justify-center">Analyze with AI</button>
-            <button id="saveBtn" class="btn-secondary hidden" title="You must be logged in to save">Save to Cloud</button>
+            <select id="themeSelect" class="input-box w-1/3 py-2 bg-[var(--surface)] text-sm cursor-pointer">
+              <option value="General">General Context</option>
+              <option value="Business & Finance">Business & Finance</option>
+              <option value="Medical & Science">Medical & Science</option>
+              <option value="Legal">Legal</option>
+              <option value="Literature & Poetry">Literature & Poetry</option>
+            </select>
+            <button id="analyzeBtn" class="btn-primary flex-1 justify-center">Analyze</button>
+            <button id="saveBtn" class="btn-secondary hidden px-4" title="You must be logged in to save">Save</button>
           </div>
         </div>
       </div>
@@ -95,8 +102,12 @@
         <div class="glass rounded-2xl p-6 h-full flex flex-col">
           <div class="flex justify-between items-center mb-4 pb-4 border-b border-[var(--border)]">
             <h3 class="font-bold text-xl">Extracted Words <span id="wordCountBadge" class="text-sm font-normal text-[var(--text-muted)]">(0)</span></h3>
-            <button id="startQuizBtn" class="text-sm text-[var(--accent)] opacity-50 cursor-not-allowed" disabled>Start Quiz</button>
+            <div class="flex gap-4">
+              <button id="generateStoryBtn" class="text-sm text-[var(--accent)] opacity-50 cursor-not-allowed hidden" disabled>Generate Story</button>
+              <button id="startQuizBtn" class="text-sm text-[var(--accent)] opacity-50 cursor-not-allowed" disabled>Start Quiz</button>
+            </div>
           </div>
+          <div id="storyContainer" class="hidden mb-4 p-4 rounded-lg bg-[var(--accent-glow)] border border-[var(--accent)] text-sm italic text-[var(--text-main)] leading-relaxed"></div>
           <div id="resultsBox" class="flex-grow overflow-y-auto pr-2 space-y-2">
              <div class="h-full flex flex-col items-center justify-center text-center text-[var(--text-muted)] opacity-60">
                 <p>Analysis results appear here</p>
