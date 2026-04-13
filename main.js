@@ -45,8 +45,10 @@ authBtn.addEventListener('click', () => {
 });
 
 // --- 2. VOCABGENIUS LOGIC ---
-const API_BASE = 'http://localhost:3000/api';
+// Use a relative URL for the API. This works for both local dev and production deployments.
+const API_BASE = '/api';
 let currentVocabList = [];
+const SPINNER_SVG = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
 // UI Elements
 const themeSelect = document.getElementById('themeSelect');
@@ -79,24 +81,52 @@ function renderResults(vocabArray) {
   saveBtn.classList.remove('hidden');
 }
 
-// --- API CALLS (Now sending user ID) ---
+// --- API CALLS (Now with secure ID Token) ---
+
+// Helper to get authorization headers
+async function getAuthHeaders() {
+  if (!currentUser) return { 'Content-Type': 'application/json' };
+  try {
+    const token = await currentUser.getIdToken(true); // Force refresh token if needed
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  } catch (error) {
+    console.error("Error getting auth token:", error);
+    // Handle token error, maybe sign the user out
+    auth.signOut();
+    return null;
+  }
+}
 
 analyzeBtn.addEventListener('click', async () => {
   const text = inputText.value.trim();
   const theme = themeSelect.value;
   if(text.length < 20) return alert("Please enter a longer passage.");
   try {
-    analyzeBtn.innerHTML = `Analyzing...`;
+    analyzeBtn.innerHTML = `${SPINNER_SVG} Analyzing...`;
     analyzeBtn.disabled = true;
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, theme })
     });
+
+    if (!response.ok) {
+      // Attempt to parse error message from response, or use a generic one
+      const errorData = await response.json().catch(() => ({ error: "Unknown server error or malformed response." }));
+      throw new Error(errorData.error || 'Analysis failed');
+    }
+    
+    // Only parse JSON for success responses
     currentVocabList = await response.json();
+
     renderResults(currentVocabList);
   } catch (err) {
-    alert("Failed to analyze text.");
+    // Error handling improved to show server message
+    alert(`Failed to analyze text: ${err.message}`);
+    console.error("Analysis error details:", err);
   } finally {
     analyzeBtn.innerHTML = `Analyze`;
     analyzeBtn.disabled = false;
@@ -106,7 +136,8 @@ analyzeBtn.addEventListener('click', async () => {
 generateStoryBtn.addEventListener('click', async () => {
   if (currentVocabList.length === 0) return;
   
-  generateStoryBtn.textContent = 'Generating...';
+  const originalText = generateStoryBtn.textContent;
+  generateStoryBtn.innerHTML = `${SPINNER_SVG} Generating...`;
   generateStoryBtn.disabled = true;
   
   try {
@@ -116,13 +147,14 @@ generateStoryBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words })
     });
+    if (!response.ok) throw new Error((await response.json()).error);
     const data = await response.json();
     storyContainer.textContent = data.story;
     storyContainer.classList.remove('hidden');
   } catch (err) {
     alert("Failed to generate contextual story.");
   } finally {
-    generateStoryBtn.textContent = 'Generate Story';
+    generateStoryBtn.innerHTML = originalText;
     generateStoryBtn.disabled = false;
   }
 });
@@ -133,16 +165,19 @@ saveBtn.addEventListener('click', async () => {
 
   const snippet = inputText.value.substring(0, 40) + "...";
   try {
-    saveBtn.textContent = "Saving...";
+    const headers = await getAuthHeaders();
+    if (!headers) return alert("Authentication error. Please log in again.");
+
+    saveBtn.innerHTML = `${SPINNER_SVG} Saving...`;
     await fetch(`${API_BASE}/history`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // Send the user ID to the backend!
-      body: JSON.stringify({ snippet, words: currentVocabList, userId: currentUser.uid })
+      headers: headers,
+      // NO MORE userId in body. It's derived from the token on the backend.
+      body: JSON.stringify({ snippet, words: currentVocabList })
     });
     await renderLibrary();
-    saveBtn.textContent = "Saved to Cloud!";
-    setTimeout(() => saveBtn.textContent = "Save to Cloud", 2000);
+    saveBtn.textContent = "Saved!";
+    setTimeout(() => saveBtn.textContent = "Save", 2000);
   } catch (err) {
     console.error("Failed to save", err);
   }
@@ -155,10 +190,13 @@ async function renderLibrary() {
   libraryGrid.innerHTML = `<div class="glass rounded-xl p-6 col-span-full text-center text-[var(--text-muted)]">Loading your library...</div>`;
 
   try {
-    // Ask the backend only for THIS user's history
-    const response = await fetch(`${API_BASE}/history?userId=${currentUser.uid}`);
+    const headers = await getAuthHeaders();
+    if (!headers) return; // Error handled in getAuthHeaders
+
+    const response = await fetch(`${API_BASE}/history`, { headers });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
     const history = await response.json();
     
@@ -185,9 +223,12 @@ async function renderLibrary() {
 
 async function loadSession(id) {
   try {
-    const response = await fetch(`${API_BASE}/history/${id}`);
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+
+    const response = await fetch(`${API_BASE}/history/${id}`, { headers });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error((await response.json()).error || `HTTP error! status: ${response.status}`);
     }
     const session = await response.json();
     if(session && session.words) {
@@ -204,8 +245,11 @@ async function loadSession(id) {
 
 clearLibBtn.addEventListener('click', async () => {
   if(confirm("Delete your personal history?")) {
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+
     try {
-        const response = await fetch(`${API_BASE}/history?userId=${currentUser.uid}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE}/history`, { method: 'DELETE', headers });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -219,11 +263,113 @@ clearLibBtn.addEventListener('click', async () => {
 
 sampleBtn.addEventListener('click', () => { inputText.value = "The proliferation of digital technology has precipitated a paradigm shift in pedagogical methodologies. While traditional education relied on a teacher-centric model, modern approaches necessitate a more interactive and student-focused framework. This unprecedented integration of sophisticated algorithms into learning platforms has created both opportunities and challenges."; });
 
-// --- QUIZ LOGIC (Unchanged) ---
-const quizModal=document.getElementById('quizModal'),quizContent=document.getElementById('quizContent'),closeQuiz=document.getElementById('closeQuiz'),quizStartScreen=document.getElementById('quizStartScreen'),quizPlayScreen=document.getElementById('quizPlayScreen'),quizEndScreen=document.getElementById('quizEndScreen'),initQuizBtn=document.getElementById('initQuizBtn'),nextQBtn=document.getElementById('nextQBtn'),restartQuizBtn=document.getElementById('restartQuizBtn'),exitQuizBtn=document.getElementById('exitQuizBtn');
-let quizState={active:false,questions:[],currentIndex:0,score:0};
+// --- 3. QUIZ LOGIC (Refactored for Clarity) ---
+const quizModal = document.getElementById('quizModal');
+const quizContent = document.getElementById('quizContent');
+const closeQuizBtn = document.getElementById('closeQuiz');
+const quizStartScreen = document.getElementById('quizStartScreen');
+const quizPlayScreen = document.getElementById('quizPlayScreen');
+const quizEndScreen = document.getElementById('quizEndScreen');
+const initQuizBtn = document.getElementById('initQuizBtn');
+const nextQBtn = document.getElementById('nextQBtn');
+const restartQuizBtn = document.getElementById('restartQuizBtn');
+const exitQuizBtn = document.getElementById('exitQuizBtn');
+const optionsContainer = document.getElementById('optionsContainer');
 
-function startQuiz(){if(currentVocabList.length<4)return alert("Need 4 words minimum");quizState={active:true,questions:[...currentVocabList].sort(()=>Math.random()-0.5).slice(0,10),currentIndex:0,score:0};document.getElementById('quizWordCount').textContent=quizState.questions.length;document.getElementById('totalQ').textContent=quizState.questions.length;quizStartScreen.classList.remove('hidden');quizPlayScreen.classList.add('hidden');quizEndScreen.classList.add('hidden');quizModal.classList.add('active');setTimeout(()=>quizContent.style.transform='scale(1)',10);}
-function loadQuestion(){const qData=quizState.questions[quizState.currentIndex];document.getElementById('currentQ').textContent=quizState.currentIndex+1;document.getElementById('currentScore').textContent=quizState.score;document.getElementById('progressBar').style.width=`${(quizState.currentIndex/quizState.questions.length)*100}%`;document.getElementById('questionText').textContent=`What does "${qData.term}" mean?`;let opts=[qData.def],wrongPool=currentVocabList.filter(v=>v.term!==qData.term).sort(()=>Math.random()-0.5);for(let i=0;i<3;i++)opts.push(wrongPool[i]?wrongPool[i].def:"Related concept");opts.sort(()=>Math.random()-0.5);const container=document.getElementById('optionsContainer');container.innerHTML=opts.map(opt=>`<button class="quiz-option" data-correct="${opt===qData.def}">${opt}</button>`).join('');container.querySelectorAll('.quiz-option').forEach(b=>b.addEventListener('click',e=>{container.querySelectorAll('.quiz-option').forEach(btn=>{btn.disabled=true;if(btn.dataset.correct==='true')btn.classList.add('correct');else if(btn===e.target)btn.classList.add('wrong');});if(e.target.dataset.correct==='true'){quizState.score++;document.getElementById('currentScore').textContent=quizState.score;}nextQBtn.classList.remove('hidden');}));nextQBtn.classList.add('hidden');}
+let quizState = { active: false, questions: [], currentIndex: 0, score: 0 };
 
-startQuizBtn.addEventListener('click',startQuiz);closeQuiz.addEventListener('click',()=>{quizModal.classList.remove('active');quizContent.style.transform='scale(0.95)';});initQuizBtn.addEventListener('click',()=>{quizStartScreen.classList.add('hidden');quizPlayScreen.classList.remove('hidden');loadQuestion();});nextQBtn.addEventListener('click',()=>{if(++quizState.currentIndex<quizState.questions.length)loadQuestion();else{quizPlayScreen.classList.add('hidden');quizEndScreen.classList.remove('hidden');document.getElementById('finalScore').textContent=Math.round((quizState.score/quizState.questions.length)*100)+'%';}});restartQuizBtn.addEventListener('click',startQuiz);exitQuizBtn.addEventListener('click',()=>closeQuiz.click());
+function startQuiz() {
+  if (currentVocabList.length < 4) return alert("You need at least 4 words to start a quiz.");
+  
+  const shuffled = [...currentVocabList].sort(() => Math.random() - 0.5);
+  quizState = {
+    active: true,
+    questions: shuffled.slice(0, 10), // Max 10 questions
+    currentIndex: 0,
+    score: 0
+  };
+
+  document.getElementById('quizWordCount').textContent = quizState.questions.length;
+  document.getElementById('totalQ').textContent = quizState.questions.length;
+  
+  quizStartScreen.classList.remove('hidden');
+  quizPlayScreen.classList.add('hidden');
+  quizEndScreen.classList.add('hidden');
+  
+  quizModal.classList.add('active');
+  setTimeout(() => quizContent.style.transform = 'scale(1)', 10);
+}
+
+function initQuiz() {
+  quizStartScreen.classList.add('hidden');
+  quizPlayScreen.classList.remove('hidden');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const qData = quizState.questions[quizState.currentIndex];
+  
+  // Update UI
+  document.getElementById('currentQ').textContent = quizState.currentIndex + 1;
+  document.getElementById('currentScore').textContent = quizState.score;
+  document.getElementById('progressBar').style.width = `${((quizState.currentIndex + 1) / quizState.questions.length) * 100}%`;
+  document.getElementById('questionText').textContent = `What does "${qData.term}" mean?`;
+  nextQBtn.classList.add('hidden');
+
+  // Generate options
+  let options = [qData.def];
+  let wrongPool = currentVocabList.filter(v => v.term !== qData.term).sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 3; i++) {
+    options.push(wrongPool[i] ? wrongPool[i].def : "A related concept");
+  }
+  options.sort(() => Math.random() - 0.5);
+
+  // Render options
+  optionsContainer.innerHTML = options.map(opt => `<button class="quiz-option" data-correct="${opt === qData.def}">${opt}</button>`).join('');
+  optionsContainer.querySelectorAll('.quiz-option').forEach(b => b.addEventListener('click', handleOptionClick));
+}
+
+function handleOptionClick(event) {
+  const clickedButton = event.target;
+  const isCorrect = clickedButton.dataset.correct === 'true';
+
+  if (isCorrect) {
+    quizState.score++;
+    document.getElementById('currentScore').textContent = quizState.score;
+  }
+
+  // Disable all options and show correct/wrong styles
+  optionsContainer.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.correct === 'true') btn.classList.add('correct');
+    else if (btn === clickedButton) btn.classList.add('wrong');
+  });
+
+  nextQBtn.classList.remove('hidden');
+}
+
+function nextQuestion() {
+  quizState.currentIndex++;
+  if (quizState.currentIndex < quizState.questions.length) {
+    loadQuestion();
+  } else {
+    // End of quiz
+    quizPlayScreen.classList.add('hidden');
+    quizEndScreen.classList.remove('hidden');
+    const finalPercentage = Math.round((quizState.score / quizState.questions.length) * 100);
+    document.getElementById('finalScore').textContent = `${finalPercentage}%`;
+  }
+}
+
+function closeQuiz() {
+  quizModal.classList.remove('active');
+  quizContent.style.transform = 'scale(0.95)';
+}
+
+// --- Event Listeners ---
+startQuizBtn.addEventListener('click', startQuiz);
+closeQuizBtn.addEventListener('click', closeQuiz);
+initQuizBtn.addEventListener('click', initQuiz);
+nextQBtn.addEventListener('click', nextQuestion);
+restartQuizBtn.addEventListener('click', startQuiz); // Restart just re-initializes
+exitQuizBtn.addEventListener('click', closeQuiz);

@@ -28,6 +28,24 @@ try {
 const db = admin.firestore();
 const sessionsCollection = db.collection('sessions'); 
 
+// --- MIDDLEWARE ---
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(403).json({ error: "Unauthorized: No token provided." });
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken; // Attach user info (like uid) to the request
+    next();
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    res.status(403).json({ error: "Unauthorized: Invalid token." });
+  }
+};
+
 // --- ROUTES ---
 
 // AI Analysis (Unchanged)
@@ -104,10 +122,9 @@ app.post('/api/story', async (req, res) => {
 });
 
 // UPGRADED: Save session WITH User ID
-app.post('/api/history', async (req, res) => {
-  const { snippet, words, userId } = req.body;
-  
-  if (!userId) return res.status(401).json({ error: "Must be logged in to save." });
+app.post('/api/history', verifyToken, async (req, res) => {
+  const { snippet, words } = req.body;
+  const userId = req.user.uid; // Get UID from verified token
   if (!words || words.length === 0) return res.status(400).json({ error: "No words to save." });
 
   try {
@@ -127,9 +144,8 @@ app.post('/api/history', async (req, res) => {
 });
 
 // UPGRADED: Get history ONLY for the logged-in user
-app.get('/api/history', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) return res.status(401).json({ error: "Must be logged in to view history." });
+app.get('/api/history', verifyToken, async (req, res) => {
+  const userId = req.user.uid; // Get UID from verified token
 
   try {
     // Let Firestore do the sorting and limiting to save memory and read costs
@@ -160,11 +176,15 @@ app.get('/api/history', async (req, res) => {
 });
 
 // Get a specific session by ID (Unchanged)
-app.get('/api/history/:id', async (req, res) => {
+app.get('/api/history/:id', verifyToken, async (req, res) => {
   try {
     const doc = await sessionsCollection.doc(req.params.id).get();
     if (!doc.exists) return res.status(404).json({ error: "Session not found" });
-    res.json({ id: doc.id, ...doc.data() });
+
+    const sessionData = doc.data();
+    // SECURITY CHECK: Ensure the user requesting the session is the one who owns it
+    if (sessionData.userId !== req.user.uid) return res.status(403).json({ error: "Forbidden: You do not own this session." });
+    res.json({ id: doc.id, ...sessionData });
   } catch (err) {
     console.error("Error fetching session by ID:", err);
     res.status(500).json({ error: "Invalid ID format or database error. Please check the server logs." });
@@ -172,9 +192,8 @@ app.get('/api/history/:id', async (req, res) => {
 });
 
 // UPGRADED: Clear ONLY the logged-in user's history
-app.delete('/api/history', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) return res.status(401).json({ error: "Must be logged in." });
+app.delete('/api/history', verifyToken, async (req, res) => {
+  const userId = req.user.uid; // Get UID from verified token
 
   try {
     const snapshot = await sessionsCollection.where('userId', '==', userId).get();
