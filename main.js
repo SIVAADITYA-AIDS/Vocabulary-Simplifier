@@ -141,9 +141,15 @@ analyzeBtn.addEventListener('click', async () => {
   analyzeBtn.innerHTML = `${SPINNER_SVG} Analyzing...`;
   analyzeBtn.disabled = true;
   resultsBox.innerHTML = `
-    <div class="h-full flex flex-col items-center justify-center text-center gap-3" style="padding:40px 0">
-      <div class="thinking-dots"><span></span><span></span><span></span></div>
-      <p style="color:var(--text-muted);font-size:14px">AI is analyzing your text...</p>
+    <div class="scan-state">
+      <div class="scan-frame">
+        <div class="scan-line-anim"></div>
+        <div class="scan-corner tl"></div>
+        <div class="scan-corner tr"></div>
+        <div class="scan-corner bl"></div>
+        <div class="scan-corner br"></div>
+      </div>
+      <p class="scan-text">DECIPHERING...</p>
     </div>`;
 
   // Reset translation state
@@ -185,7 +191,7 @@ translateBtn.addEventListener('click', async () => {
     setTranslatedVocabList(currentTranslated);
     renderResults(currentVocabList, uiElements, currentTranslated, currentLangName);
     reverseQuizBtn.classList.remove('hidden');
-    showToast(`Translated to ${currentLangName}! Toggle EN/TR on each card.`, 'success', 4000);
+    showToast(`Translated to ${currentLangName}! Toggle EN / TR on each card.`, 'success', 4000);
   } catch (err) {
     showToast(`Translation failed: ${err.message}`, 'error');
   } finally {
