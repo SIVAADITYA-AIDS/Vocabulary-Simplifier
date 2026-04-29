@@ -74,15 +74,15 @@ initAuth(firebase, (user) => {
   if (user) {
     authBtn.textContent = 'Log Out';
     userNameDisplay.textContent = `Hi, ${user.displayName.split(' ')[0]}`;
-    userNameDisplay.classList.remove('hidden');
+    userNameDisplay.style.display = 'inline';
     saveBtn.disabled = false;
-    clearLibBtn.classList.remove('hidden');
+    clearLibBtn.style.display = 'inline';
     loadLibrary();
   } else {
     authBtn.textContent = 'Log In with Google';
-    userNameDisplay.classList.add('hidden');
+    userNameDisplay.style.display = 'none';
     saveBtn.disabled = true;
-    clearLibBtn.classList.add('hidden');
+    clearLibBtn.style.display = 'none';
     renderLibraryLoggedOut(libraryGrid);
   }
 });
@@ -110,7 +110,7 @@ async function handleFileUpload(file) {
     showToast('File is too large. Please upload a file under 20MB.', 'error'); return;
   }
   pdfFileName.textContent = `📎 ${file.name}`;
-  pdfFileName.classList.remove('hidden');
+  pdfFileName.style.display = 'inline';
   const orig = pdfUploadBtn.innerHTML;
   pdfUploadBtn.innerHTML = `${SPINNER_SVG} Extracting...`;
   pdfUploadBtn.disabled = true;
@@ -121,7 +121,7 @@ async function handleFileUpload(file) {
     document.getElementById('analyzer').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     showToast(`PDF extraction failed: ${err.message}`, 'error');
-    pdfFileName.classList.add('hidden');
+    pdfFileName.style.display = 'none';
   } finally {
     pdfUploadBtn.innerHTML = orig;
     pdfUploadBtn.disabled = false;
@@ -154,14 +154,14 @@ analyzeBtn.addEventListener('click', async () => {
 
   // Reset translation state
   currentTranslated = []; currentLangName = '';
-  translationBar.classList.add('hidden');
+  translationBar.style.display = 'none';
   setTranslatedVocabList([]);
 
   try {
     currentVocabList = await analyzeText(text, theme);
     setVocabList(currentVocabList);
     renderResults(currentVocabList, uiElements, null, '');
-    translationBar.classList.remove('hidden'); // show translation bar
+    translationBar.style.display = 'block'; // show translation bar
   } catch (err) {
     showToast(`Analysis failed: ${err.message}`, 'error');
     resultsBox.innerHTML = `<div class="h-full flex items-center justify-center" style="color:#f87171;padding:40px 0">Analysis failed. Please try again.</div>`;
@@ -190,7 +190,7 @@ translateBtn.addEventListener('click', async () => {
     currentTranslated = await translateVocabList(currentVocabList, lang);
     setTranslatedVocabList(currentTranslated);
     renderResults(currentVocabList, uiElements, currentTranslated, currentLangName);
-    reverseQuizBtn.classList.remove('hidden');
+    reverseQuizBtn.style.display = 'inline-flex';
     showToast(`Translated to ${currentLangName}! Toggle EN / TR on each card.`, 'success', 4000);
   } catch (err) {
     showToast(`Translation failed: ${err.message}`, 'error');
@@ -273,8 +273,8 @@ async function loadSession(id) {
       setVocabList(currentVocabList);
       setTranslatedVocabList([]);
       renderResults(currentVocabList, uiElements, null, '');
-      translationBar.classList.remove('hidden');
-      reverseQuizBtn.classList.add('hidden');
+      translationBar.style.display = 'block';
+      reverseQuizBtn.style.display = 'none';
       window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast('Session loaded!', 'success', 2000);
     }

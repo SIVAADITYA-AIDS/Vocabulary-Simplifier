@@ -83,6 +83,7 @@ export function renderResults(vocabArray, elements, translated = null, langName 
 
   wordCountBadge.textContent = `(${vocabArray.length})`;
   startQuizBtn.disabled = false;
+  startQuizBtn.style.opacity = '1';
   startQuizBtn.classList.remove('opacity-50', 'cursor-not-allowed');
   generateStoryBtn.disabled = false;
   generateStoryBtn.style.display = 'inline';

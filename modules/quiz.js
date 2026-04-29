@@ -122,7 +122,7 @@ function loadQuestion() {
   document.getElementById('currentQ').textContent = quizState.currentIndex + 1;
   document.getElementById('currentScore').textContent = quizState.score;
   document.getElementById('progressBar').style.width = `${progress}%`;
-  nextQBtn.classList.add('hidden');
+  nextQBtn.style.display = 'none';
 
   if (currentMode === 'reverse') {
     _loadReverseQuestion(qData);
@@ -197,7 +197,7 @@ function handleOptionClick(event) {
     else if (btn === clicked) btn.classList.add('wrong');
   });
 
-  nextQBtn.classList.remove('hidden');
+  nextQBtn.style.display = 'inline-flex';
 }
 
 function endQuiz() {
