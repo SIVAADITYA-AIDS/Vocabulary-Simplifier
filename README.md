@@ -25,6 +25,28 @@ Unlike traditional tools, VocabGenius follows a proven pedagogical cycle:
 *   **Thematic Intelligence**: It understands domain-specific nuances. A word like "volatile" is defined differently if the user selects a "Technical" theme versus a "General" one.
 *   **Zero-Config Sync**: By using Firebase ID Token verification, users get a secure, personalized library that syncs across devices without needing a complex account setup.
 
+## 🤖 Comparison to Other AI Tools
+
+With the rise of AI, many tools offer vocabulary help, but VocabGenius stands out by focusing on a complete, pedagogical learning loop rather than isolated features. Here's how it compares to popular AI-powered alternatives:
+
+| Feature | VocabGenius | ChatGPT/Claude | Grammarly | Duolingo (AI-enhanced) | Anki (with AI plugins) |
+|---------|-------------|----------------|-----------|-------------------------|-------------------------|
+| **Contextual Extraction** | Extracts challenging words from user-provided text with thematic filtering | Can analyze text if prompted, but requires manual input and lacks automated extraction | Detects unclear language in writing, but not vocabulary-focused | Provides word explanations in lessons, but not from custom text | Manual card creation; AI plugins can suggest definitions but no text analysis |
+| **Personalized Definitions** | Definitions based on word usage in your specific text | Generic or prompted definitions; not tied to user context | Suggests synonyms/clarity, but no deep definitions | Contextual hints in exercises, but predefined content | User-defined or AI-suggested cards, but static |
+| **Generative Content** | Creates original stories and dynamic quizzes integrating all words | Can generate stories/examples on request, but not integrated into a learning workflow | Generates rephrasing suggestions, not narratives | AI-generated exercises, but focused on language patterns | AI can generate cards, but requires manual review and lacks narrative reinforcement |
+| **Learning Workflow** | 5-step pedagogical cycle (extract, understand, reinforce, assess, persist) | Conversational; user must guide the process | Writing-focused corrections; no structured learning | Gamified lessons with AI feedback, but broad language learning | Spaced repetition; AI enhances cards but no built-in extraction or stories |
+| **Persistence & Sync** | Secure Firebase library with Google Auth; cross-device sync | No built-in persistence; relies on user memory or external tools | Account-based suggestions, but not vocabulary tracking | Progress tracking with account, but limited to app content | Local/cloud sync for cards; AI plugins may add features but not integrated |
+| **Target Use Case** | Deep vocabulary mastery from reading materials | General Q&A, creative writing, or ad-hoc explanations | Writing improvement and proofreading | Comprehensive language acquisition | Long-term memorization via flashcards |
+| **Friction** | Zero setup; paste text and learn | Requires crafting prompts for each word/text | Integrated into writing, but not standalone vocab tool | Daily lessons; less flexible for specific texts | High initial setup for card creation |
+
+**Why Choose VocabGenius Over "All AI" Tools?**
+- **Specialized for Vocabulary Learning**: While general AI like ChatGPT excels at many tasks, VocabGenius is purpose-built for vocabulary mastery, incorporating cognitive science principles (e.g., contextual learning, reinforcement through stories).
+- **Automated Workflow**: Other tools require manual effort (e.g., prompting AI repeatedly or creating flashcards). VocabGenius automates the entire process from text input to quiz.
+- **Contextual Depth**: AI tools often give generic responses. VocabGenius analyzes your exact text, ensuring relevance to what you're reading.
+- **Integrated Ecosystem**: Combines AI generation with secure storage and assessment, creating a "learning loop" that's more effective than piecemeal AI usage.
+
+If you're using other AI tools for vocab, VocabGenius complements them by providing the structured, contextual practice they lack.
+
 ## 🛣️ Future Roadmap
 
 *   **Spaced Repetition System (SRS)**: Implementing algorithms like SM-2 to prompt users to review saved words at optimal intervals (1 day, 3 days, 1 week) for permanent retention.

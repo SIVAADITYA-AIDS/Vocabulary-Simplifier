@@ -3,162 +3,197 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VocabGenius – AI vocabulary builder with contextual translation, cultural insights, and adaptive quizzes.">
   <title>VocabGenius | AI Vocabulary Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  
+  <link rel="stylesheet" href="styles.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-
-  <style>
-    :root {
-      --bg: #040404; --surface: #0a0a0a; --card: rgba(20, 20, 20, 0.6);
-      --border: rgba(255, 255, 255, 0.08); --accent: #34d399;
-      --accent-glow: rgba(52, 211, 153, 0.3); --text-main: #f0f0f0; --text-muted: #a0a0a0;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); overflow-x: hidden; }
-    h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
-
-    .bg-grid { background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 20px 20px; }
-    .glow-orb { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; animation: float 30s infinite alternate; }
-    .glass { background: var(--card); backdrop-filter: blur(12px); border: 1px solid var(--border); }
-    .fade-in { animation: fadeUp 0.6s ease forwards; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-    .btn-primary { background: var(--accent); color: #000; font-weight: 600; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-    .btn-primary:hover:not(:disabled) { box-shadow: 0 0 25px var(--accent-glow); transform: translateY(-2px); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 12px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-
-    .input-box { background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text-main); border-radius: 12px; padding: 16px; width: 100%; resize: none; transition: all 0.3s; }
-    .input-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-    .vocab-item { border-bottom: 1px solid var(--border); padding: 12px; transition: background 0.2s; }
-    .vocab-item:last-child { border-bottom: none; }
-
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-    .modal-overlay.active { opacity: 1; pointer-events: all; }
-    .quiz-option { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; color: var(--text-main); font-size: 15px; }
-    .quiz-option:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-glow); }
-    .quiz-option.correct { border-color: var(--accent); background: rgba(52, 211, 153, 0.2); color: var(--accent); }
-    .quiz-option.wrong { border-color: #f87171; background: rgba(248, 113, 113, 0.1); color: #f87171; }
-  </style>
 </head>
-<body class="bg-grid">
+<body class="bg-mesh">
 
-  <div class="glow-orb" style="width: 600px; height: 600px; background: rgba(16, 185, 129, 0.15); top: -200px; left: -200px;"></div>
-  <div class="glow-orb" style="width: 500px; height: 500px; background: rgba(52, 211, 153, 0.1); bottom: -100px; right: -100px;"></div>
+  <!-- Glow Orbs -->
+  <div class="glow-orb" style="width:700px;height:700px;background:rgba(52,211,153,0.1);top:-250px;left:-200px;"></div>
+  <div class="glow-orb" style="width:500px;height:500px;background:rgba(167,139,250,0.08);bottom:-150px;right:-150px;"></div>
 
+  <!-- Nav -->
   <nav class="fixed top-0 w-full z-50 glass border-b border-[var(--border)]">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded bg-[var(--accent)] text-black flex items-center justify-center font-bold">V</div>
-        <span class="font-bold text-lg tracking-tight">VocabGenius</span>
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--violet));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#000;">V</div>
+        <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.5px;">VocabGenius</span>
       </div>
-      <div class="flex items-center gap-6 text-sm">
-        <a href="#analyzer" class="text-[var(--text-muted)] hover:text-white transition-colors">Analyzer</a>
-        <a href="#library" class="text-[var(--text-muted)] hover:text-white transition-colors">Library</a>
-        <div class="flex items-center gap-3 border-l border-[var(--border)] pl-6">
-            <span id="userNameDisplay" class="text-xs text-[var(--accent)] font-medium hidden"></span>
-            <button id="authBtn" class="bg-white/10 hover:bg-white/20 text-white px-4 py-1.5 rounded-full transition-colors">Log In</button>
+      <div class="flex items-center gap-6">
+        <a href="#upload">Upload</a>
+        <a href="#analyzer">Analyzer</a>
+        <a href="#library">Library</a>
+        <div class="flex items-center gap-3 pl-6" style="border-left:1px solid var(--border);">
+          <span id="userNameDisplay" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
+          <button id="authBtn" style="background:rgba(255,255,255,0.08);color:#fff;padding:6px 16px;border-radius:99px;border:1px solid var(--border);cursor:pointer;font-size:13px;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">Log In</button>
         </div>
       </div>
     </div>
   </nav>
 
   <main class="relative z-10 pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <section class="text-center mb-16 fade-in">
-      <h1 class="text-4xl md:text-6xl font-bold tracking-tight mb-4">Master Vocabulary From<br><span class="text-[var(--accent)]">Context</span></h1>
-      <p class="text-[var(--text-muted)] max-w-xl mx-auto text-lg">Analyze text to extract difficult words, understand their meaning, and quiz yourself for long-term retention.</p>
+
+    <!-- Hero -->
+    <section class="text-center mb-14 fade-in">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);border-radius:99px;padding:4px 14px;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:20px;">
+        ✨ Powered by Gemini 2.5 Flash
+      </div>
+      <h1 style="font-size:clamp(2.2rem,5vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:16px;">
+        Master Words Through<br>
+        <span style="background:linear-gradient(135deg,var(--accent),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Real Context</span>
+      </h1>
+      <p style="color:var(--text-muted);max-width:520px;margin:0 auto;font-size:16px;line-height:1.6;">Upload a PDF or paste text. Our AI extracts vocabulary, provides contextual definitions, translates to your native language, and quizzes you for retention.</p>
     </section>
 
-    <section id="analyzer" class="grid lg:grid-cols-2 gap-6 mb-24">
+    <!-- PDF Upload -->
+    <section id="upload" class="mb-8 fade-in">
+      <div class="glass rounded-2xl p-6">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(167,139,250,0.2));display:flex;align-items:center;justify-content:center;font-size:18px;">📄</div>
+          <div>
+            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;">Upload PDF or E-book</h3>
+            <p style="font-size:12px;color:var(--text-muted);">Drop a PDF file — we extract the text and populate the analyzer below. Max 20MB.</p>
+          </div>
+        </div>
+        <div id="pdfDropZone" class="drop-zone">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-muted);">
+            <div style="font-size:36px;">📥</div>
+            <p style="font-size:14px;font-weight:500;color:var(--text-main);">Drag &amp; drop your PDF here</p>
+            <button id="pdfUploadBtn" class="btn-primary" style="font-size:13px;padding:8px 20px;">Browse File</button>
+            <span id="pdfFileName" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
+          </div>
+          <input type="file" id="pdfUploadInput" accept=".pdf,.epub" style="display:none;">
+        </div>
+      </div>
+    </section>
+
+    <!-- Analyzer -->
+    <section id="analyzer" class="grid lg:grid-cols-2 gap-6 mb-20">
+      <!-- Left: Input -->
       <div class="fade-in">
         <div class="glass rounded-2xl p-6 h-full flex flex-col">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-xl">Reading Passage</h3>
-            <button id="sampleBtn" class="text-xs px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-[var(--text-muted)] transition">Load Sample</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">Reading Passage</h3>
+            <button id="sampleBtn" style="font-size:12px;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Load Sample</button>
           </div>
-          <textarea id="inputText" class="input-box flex-grow min-h-[300px] mb-4" placeholder="Paste your text here (min 20 words recommended)..."></textarea>
-          <div class="flex gap-3">
-            <select id="themeSelect" class="input-box w-1/3 py-2 bg-[var(--surface)] text-sm cursor-pointer">
-              <option value="General">General Context</option>
-              <option value="Business & Finance">Business & Finance</option>
-              <option value="Medical & Science">Medical & Science</option>
+          <textarea id="inputText" class="input-box flex-grow" style="min-height:280px;margin-bottom:14px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
+          <div style="display:flex;gap:10px;">
+            <select id="themeSelect" class="input-box" style="width:38%;padding:10px 14px;background:var(--surface);cursor:pointer;font-size:13px;">
+              <option value="General">General</option>
+              <option value="Business &amp; Finance">Business</option>
+              <option value="Medical &amp; Science">Medical</option>
               <option value="Legal">Legal</option>
-              <option value="Literature & Poetry">Literature & Poetry</option>
+              <option value="Literature &amp; Poetry">Literature</option>
             </select>
-            <button id="analyzeBtn" class="btn-primary flex-1 justify-center">Analyze</button>
-            <button id="saveBtn" class="btn-secondary hidden px-4" title="You must be logged in to save">Save</button>
+            <button id="analyzeBtn" class="btn-primary" style="flex:1;justify-content:center;">Analyze</button>
+            <button id="saveBtn" class="btn-secondary" style="padding:10px 16px;display:none;">Save</button>
           </div>
         </div>
       </div>
 
+      <!-- Right: Results -->
       <div class="fade-in">
         <div class="glass rounded-2xl p-6 h-full flex flex-col">
-          <div class="flex justify-between items-center mb-4 pb-4 border-b border-[var(--border)]">
-            <h3 class="font-bold text-xl">Extracted Words <span id="wordCountBadge" class="text-sm font-normal text-[var(--text-muted)]">(0)</span></h3>
-            <div class="flex gap-4">
-              <button id="generateStoryBtn" class="text-sm text-[var(--accent)] opacity-50 cursor-not-allowed hidden" disabled>Generate Story</button>
-              <button id="startQuizBtn" class="text-sm text-[var(--accent)] opacity-50 cursor-not-allowed" disabled>Start Quiz</button>
+          <!-- Results header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">
+              Extracted Words <span id="wordCountBadge" style="font-size:13px;font-weight:400;color:var(--text-muted);">(0)</span>
+            </h3>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <button id="generateStoryBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;display:none;" disabled>Generate Story</button>
+              <button id="startQuizBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;" disabled>Start Quiz</button>
             </div>
           </div>
-          <div id="storyContainer" class="hidden mb-4 p-4 rounded-lg bg-[var(--accent-glow)] border border-[var(--accent)] text-sm italic text-[var(--text-main)] leading-relaxed"></div>
-          <div id="resultsBox" class="flex-grow overflow-y-auto pr-2 space-y-2">
-             <div class="h-full flex flex-col items-center justify-center text-center text-[var(--text-muted)] opacity-60">
-                <p>Analysis results appear here</p>
-             </div>
+
+          <!-- Translation Bar (hidden until analysis done) -->
+          <div id="translationBar" class="hidden" style="padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🌐 Translate to:</span>
+              <select id="langSelect" class="lang-select" style="flex:1;min-width:160px;"></select>
+              <button id="translateBtn" class="btn-violet" style="padding:9px 16px;font-size:13px;white-space:nowrap;">Translate</button>
+              <button id="reverseQuizBtn" class="btn-secondary" style="padding:9px 14px;font-size:12px;white-space:nowrap;display:none;border-color:var(--violet);color:var(--violet);">🔄 Reverse Quiz</button>
+            </div>
+          </div>
+
+          <!-- Story Container -->
+          <div id="storyContainer" style="display:none;margin-bottom:12px;padding:14px;border-radius:10px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);font-size:13px;"></div>
+
+          <!-- Results Box -->
+          <div id="resultsBox" class="flex-grow overflow-y-auto space-y-3 pr-1">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);opacity:.6;padding:40px 0;text-align:center;">
+              <p>Analysis results appear here</p>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Library -->
     <section id="library" class="fade-in">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold">My Personal Library</h2>
-        <button id="clearLibBtn" class="text-xs text-red-400/70 hover:text-red-400 transition hidden">Clear Cloud Library</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;">My Personal Library</h2>
+        <button id="clearLibBtn" style="font-size:12px;color:rgba(248,113,113,0.6);background:none;border:none;cursor:pointer;transition:color .2s;display:none;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='rgba(248,113,113,0.6)'">Clear Cloud Library</button>
       </div>
       <div id="libraryGrid" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass rounded-xl p-6 col-span-full text-center border-dashed border-2 border-[var(--border)] text-[var(--text-muted)]">
-          Please log in to view your saved sessions.
-        </div>
+        <div class="lib-placeholder">Please log in to view your saved sessions.</div>
       </div>
     </section>
   </main>
 
-  <div id="quizModal" class="modal-overlay">
-    <div class="glass rounded-2xl w-full max-w-lg p-8 relative transform scale-95 transition-transform" id="quizContent">
-      <button id="closeQuiz" class="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white">✕</button>
+  <!-- Quiz Modal -->
+  <div id="quizModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="glass rounded-2xl w-full max-w-lg p-8 relative" id="quizContent">
+      <button id="closeQuiz" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;transition:color .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">✕</button>
+
+      <!-- Mode Tabs -->
+      <div class="quiz-mode-tabs">
+        <button id="modeStandard" class="mode-tab mode-active">📘 Standard</button>
+        <button id="modeReverse" class="mode-tab">🔄 Reverse</button>
+      </div>
+      <p id="reverseUnavailNote" style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:-8px;margin-bottom:8px;">Translate words first to unlock Reverse Mode</p>
+
+      <!-- Start Screen -->
       <div id="quizStartScreen" class="text-center">
-        <h3 class="text-2xl font-bold mb-2">Ready to Practice?</h3>
-        <p class="text-[var(--text-muted)] mb-6">You will be tested on <span id="quizWordCount">0</span> words.</p>
+        <div id="quizModeLabel" style="font-size:12px;color:var(--violet);font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">📘 Standard Mode</div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Ready to Practice?</h3>
+        <p style="color:var(--text-muted);margin-bottom:24px;">You will be tested on <span id="quizWordCount">0</span> words.</p>
         <button id="initQuizBtn" class="btn-primary mx-auto">Begin Quiz</button>
       </div>
-      <div id="quizPlayScreen" class="hidden">
-        <div class="flex justify-between text-sm text-[var(--text-muted)] mb-4">
+
+      <!-- Play Screen -->
+      <div id="quizPlayScreen" style="display:none;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);margin-bottom:10px;">
           <span>Question <span id="currentQ">1</span>/<span id="totalQ">10</span></span>
           <span>Score: <span id="currentScore">0</span></span>
         </div>
-        <div class="h-1 w-full bg-white/10 rounded-full mb-8 overflow-hidden"><div id="progressBar" class="h-full bg-[var(--accent)] w-0 transition-all duration-500"></div></div>
-        <h4 class="text-lg font-semibold mb-6 text-center" id="questionText"></h4>
+        <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;margin-bottom:24px;">
+          <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--violet));width:0;transition:width .5s ease;border-radius:99px;"></div>
+        </div>
+        <h4 id="questionText" style="font-size:16px;font-weight:600;margin-bottom:20px;text-align:center;line-height:1.5;"></h4>
         <div id="optionsContainer" class="space-y-3"></div>
-        <button id="nextQBtn" class="btn-primary w-full mt-6 hidden">Next Question</button>
+        <button id="nextQBtn" class="btn-primary w-full mt-6 justify-center" style="display:none;">Next Question →</button>
       </div>
-      <div id="quizEndScreen" class="hidden text-center">
-        <div class="text-5xl mb-4">🎉</div>
-        <h3 class="text-2xl font-bold mb-2">Quiz Complete!</h3>
-        <p class="text-[var(--text-muted)] mb-6">You scored <span id="finalScore">0</span>%</p>
-        <button id="restartQuizBtn" class="btn-secondary mr-2">Try Again</button>
+
+      <!-- End Screen -->
+      <div id="quizEndScreen" style="display:none;text-align:center;">
+        <div style="font-size:52px;margin-bottom:12px;">🎉</div>
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;">Quiz Complete!</h3>
+        <p style="color:var(--text-muted);margin-bottom:24px;">You scored <span id="finalScore" style="color:var(--accent);font-weight:700;">0%</span></p>
+        <button id="restartQuizBtn" class="btn-secondary" style="margin-right:10px;">Try Again</button>
         <button id="exitQuizBtn" class="btn-primary">Exit</button>
       </div>
     </div>
   </div>
 
+  <!-- Toast Container -->
+  <div id="toast-container" aria-live="polite"></div>
+
   <script src="firebase-config.js"></script>
-  <script src="main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>

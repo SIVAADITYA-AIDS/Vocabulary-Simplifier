@@ -1,16 +1,34 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const path = require('path');
 const { GoogleGenAI } = require('@google/genai');
-const admin = require("firebase-admin");
+const admin = require('firebase-admin');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Multer: store uploads in memory (no disk writes), max 20 MB
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.pdf', '.epub'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext) || file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and EPUB files are supported.'));
+    }
+  }
+});
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static('.'));
 
 // --- CONNECT TO FIREBASE ---
@@ -89,8 +107,135 @@ app.post('/api/analyze', async (req, res) => {
 
     res.json(JSON.parse(response.text));
   } catch (error) {
-    console.error("Error during AI analysis:", error);
-    res.status(500).json({ error: "AI analysis failed. Please check the server logs for more details." });
+    console.error('Error during AI analysis:', error);
+    res.status(500).json({ error: 'AI analysis failed. Please check the server logs for more details.' });
+  }
+});
+
+// --- PDF / EPUB TEXT EXTRACTION ---
+app.post('/api/extract-pdf', upload.single('document'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded. Please attach a PDF or EPUB.' });
+  }
+
+  const ext = path.extname(req.file.originalname).toLowerCase();
+
+  try {
+    if (ext === '.pdf' || req.file.mimetype === 'application/pdf') {
+      // --- Parse PDF ---
+      const data = await pdfParse(req.file.buffer);
+
+      if (!data.text || data.text.trim().length < 50) {
+        return res.status(422).json({
+          error: 'Could not extract readable text from this PDF. It may be a scanned image without OCR layer.'
+        });
+      }
+
+      // Limit to first ~6000 characters to stay within AI token budgets
+      const truncated = data.text.replace(/\s+/g, ' ').trim().slice(0, 6000);
+
+      return res.json({
+        text: truncated,
+        pageCount: data.numpages,
+        fileName: req.file.originalname,
+        truncated: data.text.length > 6000
+      });
+    }
+
+    if (ext === '.epub') {
+      // EPUB is a ZIP with HTML inside — basic extraction
+      // For now, return a friendly error pointing users toward PDF
+      return res.status(422).json({
+        error: 'EPUB support is coming soon. Please convert your e-book to PDF first.'
+      });
+    }
+
+    return res.status(400).json({ error: 'Unsupported file type.' });
+  } catch (err) {
+    console.error('PDF extraction error:', err);
+    res.status(500).json({ error: 'Failed to process the file. Ensure it is a valid, non-password-protected PDF.' });
+  }
+});
+
+// Multer error handler (file size limit, file type rejection, etc.)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  next();
+});
+
+// --- CONTEXTUAL TRANSLATION (with Cultural Notes & Mirror Word Detection) ---
+app.post('/api/translate', async (req, res) => {
+  const { vocabList, targetLang } = req.body;
+  if (!vocabList || !Array.isArray(vocabList) || vocabList.length === 0) {
+    return res.status(400).json({ error: 'No vocabulary list provided.' });
+  }
+  if (!targetLang) {
+    return res.status(400).json({ error: 'No target language specified.' });
+  }
+
+  try {
+    const prompt = `
+      You are a professional multilingual educator and linguist. Your job is to translate English vocabulary into ${targetLang} in a way that is pedagogically rich.
+
+      For EACH word in the list below, provide ALL of the following:
+
+      1. "translatedDef": Translate the English definition into ${targetLang}. Preserve educational tone.
+      2. "translatedContext": Translate the context sentence into ${targetLang}. Keep it natural.
+      3. "culturalNote": If the word carries a cultural nuance, idiomatic meaning, or if the concept exists differently in ${targetLang}-speaking cultures, write a SHORT insightful note (1-2 sentences, in English for clarity). If there is no significant cultural note, return an empty string.
+      4. "mirrorWord": Check if the English word LOOKS or SOUNDS similar to a word in ${targetLang} but has a completely DIFFERENT meaning. If such a pair exists, return an object with:
+         - "nativeWord": The visually/phonetically similar word in ${targetLang}
+         - "nativeMeaning": What that native word actually means (in English)
+         - "alert": A friendly, educational warning in English (e.g., "Heads up! The word 'X' in ${targetLang} looks very similar but actually means 'Y'. Don't let it fool you!")
+         If NO mirror word exists, return { "nativeWord": "", "nativeMeaning": "", "alert": "" }.
+
+      Keep the original English "term" UNCHANGED in your response.
+
+      Vocabulary list:
+      ${JSON.stringify(vocabList.map(v => ({ term: v.term, def: v.def, context: v.context })))}
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              term:              { type: 'STRING' },
+              translatedDef:     { type: 'STRING' },
+              translatedContext: { type: 'STRING' },
+              culturalNote:      { type: 'STRING' },
+              mirrorWord: {
+                type: 'OBJECT',
+                properties: {
+                  nativeWord:    { type: 'STRING' },
+                  nativeMeaning: { type: 'STRING' },
+                  alert:         { type: 'STRING' }
+                },
+                required: ['nativeWord', 'nativeMeaning', 'alert']
+              }
+            },
+            required: ['term', 'translatedDef', 'translatedContext', 'culturalNote', 'mirrorWord']
+          }
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text));
+  } catch (error) {
+    console.error('Translation error:', error);
+    res.status(500).json({ error: 'Translation failed. Please try again.' });
   }
 });
 

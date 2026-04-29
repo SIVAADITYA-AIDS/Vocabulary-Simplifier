@@ -1,375 +1,309 @@
-// --- 1. FIREBASE AUTHENTICATION SETUP ---
-// The configuration is now loaded from firebase-config.js
+/**
+ * main.js — Entry Point Orchestrator
+ * Imports all modules and wires DOM events. No business logic lives here.
+ */
+
+import { showToast } from './modules/toast.js';
+import {
+  analyzeText, extractPdfText, generateStory,
+  saveSession, fetchLibrary, fetchSession, clearLibrary,
+  translateVocabList, SPINNER_SVG
+} from './modules/api.js';
+import { initAuth, handleAuthButtonClick, getCurrentUser } from './modules/auth.js';
+import {
+  renderResults, renderLibraryLoading, renderLibraryGrid,
+  renderLibraryError, renderLibraryLoggedOut, renderStory
+} from './modules/ui.js';
+import {
+  setVocabList, setTranslatedVocabList,
+  startQuiz, closeQuiz, initQuiz, nextQuestion,
+  initQuizModeTabs
+} from './modules/quiz.js';
+import { LANGUAGES } from './modules/languages.js';
+
+// ======================
+// Populate Language Select
+// ======================
+const langSelect = document.getElementById('langSelect');
+LANGUAGES.forEach(lang => {
+  const opt = document.createElement('option');
+  opt.value = lang.code;
+  opt.textContent = `${lang.name} — ${lang.native}`;
+  langSelect.appendChild(opt);
+});
+
+// ======================
+// DOM References
+// ======================
+const authBtn          = document.getElementById('authBtn');
+const userNameDisplay  = document.getElementById('userNameDisplay');
+const libraryGrid      = document.getElementById('libraryGrid');
+const clearLibBtn      = document.getElementById('clearLibBtn');
+const saveBtn          = document.getElementById('saveBtn');
+const themeSelect      = document.getElementById('themeSelect');
+const inputText        = document.getElementById('inputText');
+const analyzeBtn       = document.getElementById('analyzeBtn');
+const sampleBtn        = document.getElementById('sampleBtn');
+const generateStoryBtn = document.getElementById('generateStoryBtn');
+const storyContainer   = document.getElementById('storyContainer');
+const startQuizBtn     = document.getElementById('startQuizBtn');
+const resultsBox       = document.getElementById('resultsBox');
+const wordCountBadge   = document.getElementById('wordCountBadge');
+const pdfUploadInput   = document.getElementById('pdfUploadInput');
+const pdfUploadBtn     = document.getElementById('pdfUploadBtn');
+const pdfFileName      = document.getElementById('pdfFileName');
+const pdfDropZone      = document.getElementById('pdfDropZone');
+const translateBtn     = document.getElementById('translateBtn');
+const translationBar   = document.getElementById('translationBar');
+const reverseQuizBtn   = document.getElementById('reverseQuizBtn');
+
+const uiElements = { resultsBox, wordCountBadge, startQuizBtn, generateStoryBtn, storyContainer, saveBtn };
+
+// ======================
+// State
+// ======================
+let currentVocabList     = [];
+let currentTranslated    = [];
+let currentLangName      = '';
+
+// ======================
+// 1. AUTH
+// ======================
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const provider = new firebase.auth.GoogleAuthProvider();
-
-let currentUser = null; // Tracks who is logged in
-
-// DOM Elements
-const authBtn = document.getElementById('authBtn');
-const userNameDisplay = document.getElementById('userNameDisplay');
-const libraryGrid = document.getElementById('libraryGrid');
-const clearLibBtn = document.getElementById('clearLibBtn');
-const saveBtn = document.getElementById('saveBtn');
-
-// Listen for Login/Logout changes
-auth.onAuthStateChanged((user) => {
-  currentUser = user;
-  
+initAuth(firebase, (user) => {
   if (user) {
-    // User is logged in
-    authBtn.textContent = "Log Out";
+    authBtn.textContent = 'Log Out';
     userNameDisplay.textContent = `Hi, ${user.displayName.split(' ')[0]}`;
     userNameDisplay.classList.remove('hidden');
     saveBtn.disabled = false;
     clearLibBtn.classList.remove('hidden');
-    renderLibrary(); // Fetch their personal library
+    loadLibrary();
   } else {
-    // User is logged out
-    authBtn.textContent = "Log In with Google";
+    authBtn.textContent = 'Log In with Google';
     userNameDisplay.classList.add('hidden');
     saveBtn.disabled = true;
     clearLibBtn.classList.add('hidden');
-    libraryGrid.innerHTML = `<div class="glass rounded-xl p-6 col-span-full text-center border-dashed border-2 border-[var(--border)] text-[var(--text-muted)]">Please log in to view your saved sessions.</div>`;
+    renderLibraryLoggedOut(libraryGrid);
   }
 });
+authBtn.addEventListener('click', handleAuthButtonClick);
 
-// Handle Login/Logout button click
-authBtn.addEventListener('click', () => {
-  if (currentUser) {
-    auth.signOut();
-  } else {
-    auth.signInWithPopup(provider).catch(error => console.error("Login failed:", error));
-  }
+// ======================
+// 2. PDF UPLOAD
+// ======================
+pdfUploadBtn.addEventListener('click', () => pdfUploadInput.click());
+pdfUploadInput.addEventListener('change', e => { if (e.target.files[0]) handleFileUpload(e.target.files[0]); });
+
+pdfDropZone.addEventListener('dragover', e => { e.preventDefault(); pdfDropZone.classList.add('drag-over'); });
+pdfDropZone.addEventListener('dragleave', () => pdfDropZone.classList.remove('drag-over'));
+pdfDropZone.addEventListener('drop', e => {
+  e.preventDefault(); pdfDropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
 });
 
-// --- 2. VOCABGENIUS LOGIC ---
-// Use a relative URL for the API. This works for both local dev and production deployments.
-const API_BASE = '/api';
-let currentVocabList = [];
-const SPINNER_SVG = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-
-// UI Elements
-const themeSelect = document.getElementById('themeSelect');
-const inputText = document.getElementById('inputText');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const sampleBtn = document.getElementById('sampleBtn');
-const generateStoryBtn = document.getElementById('generateStoryBtn');
-const storyContainer = document.getElementById('storyContainer');
-const startQuizBtn = document.getElementById('startQuizBtn');
-const resultsBox = document.getElementById('resultsBox');
-const wordCountBadge = document.getElementById('wordCountBadge');
-
-function renderResults(vocabArray) {
-  if (vocabArray.length === 0) return;
-  resultsBox.innerHTML = vocabArray.map(item => `
-    <div class="vocab-item rounded-lg px-2">
-      <span class="font-bold text-[var(--accent)] capitalize">${item.term}</span>
-      <p class="text-sm text-[var(--text-main)] mb-1">${item.def}</p>
-      <p class="text-xs text-[var(--text-muted)]"><span class="text-[var(--accent)]">Syn: </span>${item.syn}</p>
-      <p class="text-xs italic opacity-70 mt-2 border-l-2 border-[var(--accent)] pl-2">${item.context}</p>
-    </div>
-  `).join('');
-  wordCountBadge.textContent = `(${vocabArray.length})`;
-  startQuizBtn.disabled = false;
-  startQuizBtn.classList.remove('opacity-50');
-  generateStoryBtn.disabled = false;
-  generateStoryBtn.classList.remove('opacity-50', 'hidden');
-  storyContainer.classList.add('hidden');
-  storyContainer.textContent = '';
-  saveBtn.classList.remove('hidden');
-}
-
-// --- API CALLS (Now with secure ID Token) ---
-
-// Helper to get authorization headers
-async function getAuthHeaders() {
-  if (!currentUser) return { 'Content-Type': 'application/json' };
+async function handleFileUpload(file) {
+  const ext = file.name.toLowerCase();
+  if (!ext.endsWith('.pdf') && !ext.endsWith('.epub')) {
+    showToast('Only PDF and EPUB files are supported.', 'error'); return;
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('File is too large. Please upload a file under 20MB.', 'error'); return;
+  }
+  pdfFileName.textContent = `📎 ${file.name}`;
+  pdfFileName.classList.remove('hidden');
+  const orig = pdfUploadBtn.innerHTML;
+  pdfUploadBtn.innerHTML = `${SPINNER_SVG} Extracting...`;
+  pdfUploadBtn.disabled = true;
   try {
-    const token = await currentUser.getIdToken(true); // Force refresh token if needed
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-  } catch (error) {
-    console.error("Error getting auth token:", error);
-    // Handle token error, maybe sign the user out
-    auth.signOut();
-    return null;
+    const result = await extractPdfText(file);
+    inputText.value = result.text;
+    showToast(`Extracted ${result.pageCount} page(s) from "${result.fileName}". Ready to analyze!`, 'success', 5000);
+    document.getElementById('analyzer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    showToast(`PDF extraction failed: ${err.message}`, 'error');
+    pdfFileName.classList.add('hidden');
+  } finally {
+    pdfUploadBtn.innerHTML = orig;
+    pdfUploadBtn.disabled = false;
+    pdfUploadInput.value = '';
   }
 }
 
+// ======================
+// 3. TEXT ANALYSIS
+// ======================
 analyzeBtn.addEventListener('click', async () => {
   const text = inputText.value.trim();
   const theme = themeSelect.value;
-  if(text.length < 20) return alert("Please enter a longer passage.");
+  if (text.length < 20) { showToast('Please enter a longer passage (at least 20 characters).', 'warning'); return; }
+
+  const orig = analyzeBtn.innerHTML;
+  analyzeBtn.innerHTML = `${SPINNER_SVG} Analyzing...`;
+  analyzeBtn.disabled = true;
+  resultsBox.innerHTML = `
+    <div class="h-full flex flex-col items-center justify-center text-center gap-3" style="padding:40px 0">
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+      <p style="color:var(--text-muted);font-size:14px">AI is analyzing your text...</p>
+    </div>`;
+
+  // Reset translation state
+  currentTranslated = []; currentLangName = '';
+  translationBar.classList.add('hidden');
+  setTranslatedVocabList([]);
+
   try {
-    analyzeBtn.innerHTML = `${SPINNER_SVG} Analyzing...`;
-    analyzeBtn.disabled = true;
-    const response = await fetch(`${API_BASE}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, theme })
-    });
-
-    if (!response.ok) {
-      // Attempt to parse error message from response, or use a generic one
-      const errorData = await response.json().catch(() => ({ error: "Unknown server error or malformed response." }));
-      throw new Error(errorData.error || 'Analysis failed');
-    }
-    
-    // Only parse JSON for success responses
-    currentVocabList = await response.json();
-
-    renderResults(currentVocabList);
+    currentVocabList = await analyzeText(text, theme);
+    setVocabList(currentVocabList);
+    renderResults(currentVocabList, uiElements, null, '');
+    translationBar.classList.remove('hidden'); // show translation bar
   } catch (err) {
-    // Error handling improved to show server message
-    alert(`Failed to analyze text: ${err.message}`);
-    console.error("Analysis error details:", err);
+    showToast(`Analysis failed: ${err.message}`, 'error');
+    resultsBox.innerHTML = `<div class="h-full flex items-center justify-center" style="color:#f87171;padding:40px 0">Analysis failed. Please try again.</div>`;
   } finally {
-    analyzeBtn.innerHTML = `Analyze`;
+    analyzeBtn.innerHTML = orig;
     analyzeBtn.disabled = false;
   }
 });
 
+// ======================
+// 4. TRANSLATION
+// ======================
+translateBtn.addEventListener('click', async () => {
+  if (currentVocabList.length === 0) { showToast('Analyze some text first.', 'warning'); return; }
+  const lang = langSelect.value;
+  if (!lang) { showToast('Please select a target language.', 'warning'); return; }
+
+  currentLangName = LANGUAGES.find(l => l.code === lang)?.name || lang;
+
+  const orig = translateBtn.innerHTML;
+  translateBtn.innerHTML = `${SPINNER_SVG} Translating...`;
+  translateBtn.disabled = true;
+  langSelect.disabled = true;
+
+  try {
+    currentTranslated = await translateVocabList(currentVocabList, lang);
+    setTranslatedVocabList(currentTranslated);
+    renderResults(currentVocabList, uiElements, currentTranslated, currentLangName);
+    reverseQuizBtn.classList.remove('hidden');
+    showToast(`Translated to ${currentLangName}! Toggle EN/TR on each card.`, 'success', 4000);
+  } catch (err) {
+    showToast(`Translation failed: ${err.message}`, 'error');
+  } finally {
+    translateBtn.innerHTML = orig;
+    translateBtn.disabled = false;
+    langSelect.disabled = false;
+  }
+});
+
+// Reverse Quiz button (separate from main quiz)
+reverseQuizBtn.addEventListener('click', () => {
+  // Force reverse mode and open quiz
+  document.getElementById('modeReverse').click();
+  startQuiz();
+});
+
+// ======================
+// 5. STORY GENERATION
+// ======================
 generateStoryBtn.addEventListener('click', async () => {
   if (currentVocabList.length === 0) return;
-  
-  const originalText = generateStoryBtn.textContent;
+  const orig = generateStoryBtn.innerHTML;
   generateStoryBtn.innerHTML = `${SPINNER_SVG} Generating...`;
   generateStoryBtn.disabled = true;
-  
   try {
-    const words = currentVocabList.map(item => item.term);
-    const response = await fetch(`${API_BASE}/story`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words })
-    });
-    if (!response.ok) throw new Error((await response.json()).error);
-    const data = await response.json();
-    storyContainer.textContent = data.story;
-    storyContainer.classList.remove('hidden');
+    const data = await generateStory(currentVocabList.map(i => i.term));
+    renderStory(storyContainer, data.story);
+    showToast('Story generated!', 'success', 2000);
   } catch (err) {
-    alert("Failed to generate contextual story.");
+    showToast('Failed to generate story. Please try again.', 'error');
   } finally {
-    generateStoryBtn.innerHTML = originalText;
+    generateStoryBtn.innerHTML = orig;
     generateStoryBtn.disabled = false;
   }
 });
 
+// ======================
+// 6. SAVE SESSION
+// ======================
 saveBtn.addEventListener('click', async () => {
-  if(!currentUser) return alert("You must be logged in to save.");
-  if(currentVocabList.length === 0) return;
-
-  const snippet = inputText.value.substring(0, 40) + "...";
+  if (!getCurrentUser()) { showToast('You must be logged in to save.', 'warning'); return; }
+  if (currentVocabList.length === 0) return;
+  const snippet = inputText.value.substring(0, 40) + '...';
+  const orig = saveBtn.innerHTML;
+  saveBtn.innerHTML = `${SPINNER_SVG} Saving...`;
+  saveBtn.disabled = true;
   try {
-    const headers = await getAuthHeaders();
-    if (!headers) return alert("Authentication error. Please log in again.");
-
-    saveBtn.innerHTML = `${SPINNER_SVG} Saving...`;
-    await fetch(`${API_BASE}/history`, {
-      method: 'POST',
-      headers: headers,
-      // NO MORE userId in body. It's derived from the token on the backend.
-      body: JSON.stringify({ snippet, words: currentVocabList })
-    });
-    await renderLibrary();
-    saveBtn.textContent = "Saved!";
-    setTimeout(() => saveBtn.textContent = "Save", 2000);
+    await saveSession(snippet, currentVocabList);
+    showToast('Session saved to your library! 📚', 'success');
+    await loadLibrary();
   } catch (err) {
-    console.error("Failed to save", err);
+    showToast(`Save failed: ${err.message}`, 'error');
+  } finally {
+    saveBtn.innerHTML = orig;
+    saveBtn.disabled = false;
   }
 });
 
-async function renderLibrary() {
-  if(!currentUser) return; // Don't fetch if logged out
-  
-  // UI/UX Improvement: Add a loading state
-  libraryGrid.innerHTML = `<div class="glass rounded-xl p-6 col-span-full text-center text-[var(--text-muted)]">Loading your library...</div>`;
-
+// ======================
+// 7. LIBRARY
+// ======================
+async function loadLibrary() {
+  if (!getCurrentUser()) return;
+  renderLibraryLoading(libraryGrid);
   try {
-    const headers = await getAuthHeaders();
-    if (!headers) return; // Error handled in getAuthHeaders
-
-    const response = await fetch(`${API_BASE}/history`, { headers });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-    const history = await response.json();
-    
-    if(history.length === 0) {
-      libraryGrid.innerHTML = `<div class="glass rounded-xl p-6 col-span-full text-center border-dashed border-2 border-[var(--border)] text-[var(--text-muted)]">Your library is empty.</div>`;
-      return;
-    }
-
-    libraryGrid.innerHTML = history.map(item => `
-      <div class="glass rounded-xl p-4 hover:border-[var(--accent)] transition-all cursor-pointer" onclick="loadSession('${item.id}')">
-        <div class="flex justify-between items-start mb-2">
-          <span class="text-xs text-[var(--text-muted)]">${item.date}</span>
-          <span class="text-[var(--accent)] font-bold text-sm">${item.words.length} words</span>
-        </div>
-        <p class="text-xs text-[var(--text-muted)] truncate">${item.snippet}</p>
-      </div>
-    `).join('');
+    const history = await fetchLibrary();
+    renderLibraryGrid(libraryGrid, history, loadSession);
   } catch (err) {
-    console.error("Failed to load library", err);
-    // UI/UX Improvement: Show an error message
-    libraryGrid.innerHTML = `<div class="glass rounded-xl p-6 col-span-full text-center text-red-400">Failed to load library. Please try again later.</div>`;
+    renderLibraryError(libraryGrid, 'Failed to load library. Please try again later.');
   }
 }
 
 async function loadSession(id) {
   try {
-    const headers = await getAuthHeaders();
-    if (!headers) return;
-
-    const response = await fetch(`${API_BASE}/history/${id}`, { headers });
-    if (!response.ok) {
-        throw new Error((await response.json()).error || `HTTP error! status: ${response.status}`);
-    }
-    const session = await response.json();
-    if(session && session.words) {
+    const session = await fetchSession(id);
+    if (session && session.words) {
       currentVocabList = session.words;
-      resultsBox.innerHTML = ''; 
-      renderResults(currentVocabList);
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      currentTranslated = []; currentLangName = '';
+      setVocabList(currentVocabList);
+      setTranslatedVocabList([]);
+      renderResults(currentVocabList, uiElements, null, '');
+      translationBar.classList.remove('hidden');
+      reverseQuizBtn.classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('Session loaded!', 'success', 2000);
     }
   } catch (err) {
-      console.error(`Failed to load session ${id}`, err);
-      alert(`Could not load session. It may have been deleted or there was a network error.`);
+    showToast('Could not load session. It may have been deleted.', 'error');
   }
 }
 
 clearLibBtn.addEventListener('click', async () => {
-  if(confirm("Delete your personal history?")) {
-    const headers = await getAuthHeaders();
-    if (!headers) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/history`, { method: 'DELETE', headers });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        await renderLibrary();
-    } catch (err) {
-        console.error("Failed to clear library", err);
-        alert("Failed to clear library. Please try again.");
-    }
+  if (!confirm('Delete your entire personal library? This cannot be undone.')) return;
+  try {
+    await clearLibrary();
+    showToast('Library cleared.', 'info');
+    await loadLibrary();
+  } catch (err) {
+    showToast('Failed to clear library. Please try again.', 'error');
   }
 });
 
-sampleBtn.addEventListener('click', () => { inputText.value = "The proliferation of digital technology has precipitated a paradigm shift in pedagogical methodologies. While traditional education relied on a teacher-centric model, modern approaches necessitate a more interactive and student-focused framework. This unprecedented integration of sophisticated algorithms into learning platforms has created both opportunities and challenges."; });
+// ======================
+// 8. SAMPLE TEXT
+// ======================
+sampleBtn.addEventListener('click', () => {
+  inputText.value = 'The proliferation of digital technology has precipitated a paradigm shift in pedagogical methodologies. While traditional education relied on a teacher-centric model, modern approaches necessitate a more interactive and student-focused framework. This unprecedented integration of sophisticated algorithms into learning platforms has created both opportunities and challenges.';
+  showToast('Sample text loaded!', 'info', 2000);
+});
 
-// --- 3. QUIZ LOGIC (Refactored for Clarity) ---
-const quizModal = document.getElementById('quizModal');
-const quizContent = document.getElementById('quizContent');
-const closeQuizBtn = document.getElementById('closeQuiz');
-const quizStartScreen = document.getElementById('quizStartScreen');
-const quizPlayScreen = document.getElementById('quizPlayScreen');
-const quizEndScreen = document.getElementById('quizEndScreen');
-const initQuizBtn = document.getElementById('initQuizBtn');
-const nextQBtn = document.getElementById('nextQBtn');
-const restartQuizBtn = document.getElementById('restartQuizBtn');
-const exitQuizBtn = document.getElementById('exitQuizBtn');
-const optionsContainer = document.getElementById('optionsContainer');
-
-let quizState = { active: false, questions: [], currentIndex: 0, score: 0 };
-
-function startQuiz() {
-  if (currentVocabList.length < 4) return alert("You need at least 4 words to start a quiz.");
-  
-  const shuffled = [...currentVocabList].sort(() => Math.random() - 0.5);
-  quizState = {
-    active: true,
-    questions: shuffled.slice(0, 10), // Max 10 questions
-    currentIndex: 0,
-    score: 0
-  };
-
-  document.getElementById('quizWordCount').textContent = quizState.questions.length;
-  document.getElementById('totalQ').textContent = quizState.questions.length;
-  
-  quizStartScreen.classList.remove('hidden');
-  quizPlayScreen.classList.add('hidden');
-  quizEndScreen.classList.add('hidden');
-  
-  quizModal.classList.add('active');
-  setTimeout(() => quizContent.style.transform = 'scale(1)', 10);
-}
-
-function initQuiz() {
-  quizStartScreen.classList.add('hidden');
-  quizPlayScreen.classList.remove('hidden');
-  loadQuestion();
-}
-
-function loadQuestion() {
-  const qData = quizState.questions[quizState.currentIndex];
-  
-  // Update UI
-  document.getElementById('currentQ').textContent = quizState.currentIndex + 1;
-  document.getElementById('currentScore').textContent = quizState.score;
-  document.getElementById('progressBar').style.width = `${((quizState.currentIndex + 1) / quizState.questions.length) * 100}%`;
-  document.getElementById('questionText').textContent = `What does "${qData.term}" mean?`;
-  nextQBtn.classList.add('hidden');
-
-  // Generate options
-  let options = [qData.def];
-  let wrongPool = currentVocabList.filter(v => v.term !== qData.term).sort(() => Math.random() - 0.5);
-  for (let i = 0; i < 3; i++) {
-    options.push(wrongPool[i] ? wrongPool[i].def : "A related concept");
-  }
-  options.sort(() => Math.random() - 0.5);
-
-  // Render options
-  optionsContainer.innerHTML = options.map(opt => `<button class="quiz-option" data-correct="${opt === qData.def}">${opt}</button>`).join('');
-  optionsContainer.querySelectorAll('.quiz-option').forEach(b => b.addEventListener('click', handleOptionClick));
-}
-
-function handleOptionClick(event) {
-  const clickedButton = event.target;
-  const isCorrect = clickedButton.dataset.correct === 'true';
-
-  if (isCorrect) {
-    quizState.score++;
-    document.getElementById('currentScore').textContent = quizState.score;
-  }
-
-  // Disable all options and show correct/wrong styles
-  optionsContainer.querySelectorAll('.quiz-option').forEach(btn => {
-    btn.disabled = true;
-    if (btn.dataset.correct === 'true') btn.classList.add('correct');
-    else if (btn === clickedButton) btn.classList.add('wrong');
-  });
-
-  nextQBtn.classList.remove('hidden');
-}
-
-function nextQuestion() {
-  quizState.currentIndex++;
-  if (quizState.currentIndex < quizState.questions.length) {
-    loadQuestion();
-  } else {
-    // End of quiz
-    quizPlayScreen.classList.add('hidden');
-    quizEndScreen.classList.remove('hidden');
-    const finalPercentage = Math.round((quizState.score / quizState.questions.length) * 100);
-    document.getElementById('finalScore').textContent = `${finalPercentage}%`;
-  }
-}
-
-function closeQuiz() {
-  quizModal.classList.remove('active');
-  quizContent.style.transform = 'scale(0.95)';
-}
-
-// --- Event Listeners ---
+// ======================
+// 9. QUIZ EVENTS
+// ======================
+initQuizModeTabs();
 startQuizBtn.addEventListener('click', startQuiz);
-closeQuizBtn.addEventListener('click', closeQuiz);
-initQuizBtn.addEventListener('click', initQuiz);
-nextQBtn.addEventListener('click', nextQuestion);
-restartQuizBtn.addEventListener('click', startQuiz); // Restart just re-initializes
-exitQuizBtn.addEventListener('click', closeQuiz);
+document.getElementById('closeQuiz').addEventListener('click', closeQuiz);
+document.getElementById('initQuizBtn').addEventListener('click', initQuiz);
+document.getElementById('nextQBtn').addEventListener('click', nextQuestion);
+document.getElementById('restartQuizBtn').addEventListener('click', startQuiz);
+document.getElementById('exitQuizBtn').addEventListener('click', closeQuiz);
+document.getElementById('quizModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeQuiz(); });
