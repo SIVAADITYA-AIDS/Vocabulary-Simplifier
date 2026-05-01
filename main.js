@@ -182,9 +182,12 @@ analyzeBtn.addEventListener('click', async () => {
   const orig = analyzeBtn.innerHTML;
   analyzeBtn.innerHTML = `${SPINNER_SVG} Analyzing...`;
   analyzeBtn.disabled = true;
+  // Build data dots for scan animation
+  const dots = Array.from({length:24},(_,i)=>`<div class="scan-dot" style="animation-delay:${(i*0.08).toFixed(2)}s"></div>`).join('');
   resultsBox.innerHTML = `
     <div class="scan-state">
       <div class="scan-frame">
+        <div class="scan-data-dots">${dots}</div>
         <div class="scan-line-anim"></div>
         <div class="scan-corner tl"></div>
         <div class="scan-corner tr"></div>
@@ -192,6 +195,7 @@ analyzeBtn.addEventListener('click', async () => {
         <div class="scan-corner br"></div>
       </div>
       <p class="scan-text">DECIPHERING...</p>
+      <p class="scan-sub">EXTRACTING VOCABULARY</p>
     </div>`;
 
   // Reset all derived state
@@ -405,16 +409,61 @@ document.getElementById('closeQuiz').addEventListener('click', closeQuiz);
 document.getElementById('initQuizBtn').addEventListener('click', initQuiz);
 document.getElementById('nextQBtn').addEventListener('click', nextQuestion);
 document.getElementById('restartQuizBtn').addEventListener('click', async () => {
-  // Regenerate SRS sentences on retry for true variety
+  const btn = document.getElementById('restartQuizBtn');
   if (getMode() === 'srs' && currentVocabList.length >= 4) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '⏳ Generating...';
+    btn.disabled = true;
     try {
       const sentences = await generateSRSQuestions(currentVocabList);
       setSRSQuestions(sentences);
       startQuiz(sentences);
-    } catch { startQuiz(); }
+    } catch (err) {
+      showToast('Could not regenerate quiz: ' + err.message, 'error');
+    } finally {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
   } else {
     startQuiz();
   }
 });
 document.getElementById('exitQuizBtn').addEventListener('click', closeQuiz);
 document.getElementById('quizModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeQuiz(); });
+// ======================
+// 12. PARALLAX + REVEAL
+// ======================
+(function initParallaxAndReveal() {
+  const heroBg = document.getElementById('heroBg');
+  const heroWords = document.getElementById('heroWords');
+  const heroContent = document.getElementById('heroContent');
+  const heroReticle = document.getElementById('heroReticle');
+
+  // Parallax on scroll
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (heroBg)      heroBg.style.transform      = `translateY(${y * 0.35}px) scale(1.1)`;
+    if (heroWords) {
+      heroWords.querySelectorAll('.fd1').forEach(el => { el.style.transform = `translateY(${y * -0.18}px)`; });
+      heroWords.querySelectorAll('.fd2').forEach(el => { el.style.transform = `translateY(${y * -0.10}px)`; });
+      heroWords.querySelectorAll('.fd3').forEach(el => { el.style.transform = `translateY(${y * -0.06}px)`; });
+    }
+    if (heroContent)  heroContent.style.transform  = `translateY(${y * 0.12}px)`;
+    if (heroReticle)  heroReticle.style.transform  = `translate(-50%,-50%) translateY(${y * 0.08}px)`;
+  }, { passive: true });
+
+  // Floating word entrance stagger
+  if (heroWords) {
+    heroWords.querySelectorAll('.float-word').forEach((el, i) => {
+      el.style.opacity = '0';
+      el.style.transition = `opacity 1s ease ${i * 0.12}s, transform 0.05s linear`;
+      setTimeout(() => { el.style.opacity = '1'; }, 300 + i * 120);
+    });
+  }
+
+  // Scroll reveal for sections
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('revealed'); revealObserver.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal-section').forEach(el => revealObserver.observe(el));
+})();

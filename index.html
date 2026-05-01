@@ -13,15 +13,11 @@
 </head>
 <body class="bg-mesh">
 
-  <!-- Glow Orbs -->
-  <div class="glow-orb" style="width:700px;height:700px;background:rgba(6,182,212,0.08);top:-280px;left:-200px;"></div>
-  <div class="glow-orb" style="width:500px;height:500px;background:rgba(139,92,246,0.06);bottom:-180px;right:-150px;"></div>
-
-  <!-- Nav -->
+  <!-- ════════════════════════════════════════
+       NAVIGATION
+  ════════════════════════════════════════ -->
   <nav class="fixed top-0 w-full z-50 glass" style="border-bottom:1px solid var(--border);">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-
-      <!-- Logo -->
       <div class="flex items-center gap-3">
         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
@@ -31,48 +27,123 @@
             </linearGradient>
           </defs>
           <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
-          <!-- Scan line -->
           <rect x="5" y="17.5" width="26" height="1" rx="0.5" fill="rgba(255,255,255,0.22)"/>
-          <!-- Corner brackets -->
           <path d="M5 12 L5 5 L12 5" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
           <path d="M31 12 L31 5 L24 5" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
           <path d="M5 24 L5 31 L12 31" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
           <path d="M31 24 L31 31 L24 31" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <!-- Letter D -->
           <text x="9" y="26" font-family="Arial Black,sans-serif" font-size="20" font-weight="900" fill="white">D</text>
         </svg>
         <span style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px;">Decipher</span>
       </div>
-
-      <!-- Nav Links + Auth -->
       <div class="flex items-center gap-6">
         <a href="#upload">Upload</a>
         <a href="#analyzer">Analyzer</a>
         <a href="#library">Library</a>
         <div class="flex items-center gap-3 pl-6" style="border-left:1px solid var(--border);">
           <span id="userNameDisplay" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
-          <button id="authBtn" style="background:rgba(255,255,255,0.06);color:var(--text-main);padding:6px 18px;border-radius:99px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Log In</button>
+          <button id="authBtn" class="nav-auth-btn">Log In</button>
         </div>
       </div>
     </div>
   </nav>
 
-  <main class="relative z-10 pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+  <!-- ════════════════════════════════════════
+       CINEMATIC HERO
+  ════════════════════════════════════════ -->
+  <section class="hero-cinematic" id="heroSection">
+    <!-- Background image layer (parallax) -->
+    <div class="hero-bg-layer" id="heroBg"></div>
+    <!-- Dark overlay gradient -->
+    <div class="hero-overlay"></div>
 
-    <!-- Hero -->
-    <section class="text-center mb-14 fade-in">
-      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.25);border-radius:99px;padding:4px 16px;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:22px;letter-spacing:.02em;">
-        ✦ Powered by Gemini 2.5 Flash
-      </div>
-      <h1 style="font-size:clamp(2.4rem,5vw,4.2rem);font-weight:800;line-height:1.08;letter-spacing:-1.5px;margin-bottom:18px;">
+    <!-- Floating vocabulary words at 3 depth levels -->
+    <div class="hero-float-words" id="heroWords">
+      <span class="float-word fd1" style="top:14%;left:7%;">paradigm</span>
+      <span class="float-word fd2" style="top:68%;right:9%;">ephemeral</span>
+      <span class="float-word fd3" style="top:28%;right:8%;">eloquent</span>
+      <span class="float-word fd1" style="top:58%;left:6%;">pedagogy</span>
+      <span class="float-word fd2" style="top:38%;right:18%;">cognition</span>
+      <span class="float-word fd3" style="top:78%;left:22%;">synthesis</span>
+      <span class="float-word fd1" style="top:48%;left:16%;">nuanced</span>
+      <span class="float-word fd2" style="top:82%;right:28%;">proliferate</span>
+      <span class="float-word fd3" style="top:20%;left:30%;">unprecedented</span>
+      <span class="float-word fd1" style="top:90%;left:45%;">sophisticated</span>
+    </div>
+
+    <!-- Scanner reticle (decorative) -->
+    <div class="hero-reticle" id="heroReticle">
+      <div class="reticle-ring r1"></div>
+      <div class="reticle-ring r2"></div>
+      <div class="reticle-corner rc-tl"></div>
+      <div class="reticle-corner rc-tr"></div>
+      <div class="reticle-corner rc-bl"></div>
+      <div class="reticle-corner rc-br"></div>
+      <div class="reticle-cross-h"></div>
+      <div class="reticle-cross-v"></div>
+    </div>
+
+    <!-- Central hero content -->
+    <div class="hero-content" id="heroContent">
+      <div class="hero-badge">✦ Powered by Gemini 2.5 Flash</div>
+      <h1 class="hero-title">
         Decipher Any Text.<br>
-        <span style="background:linear-gradient(135deg,var(--accent) 0%,#ff6b35 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Master Every Word.</span>
+        <span class="hero-gradient-text">Master Every Word.</span>
       </h1>
-      <p style="color:var(--text-muted);max-width:520px;margin:0 auto;font-size:16px;line-height:1.7;">Upload a PDF or paste any passage. Our AI extracts the hardest vocabulary, explains it in context, translates it to your native language, and quizzes you for long-term retention.</p>
-    </section>
+      <p class="hero-desc">Upload a PDF or paste any passage. AI extracts vocabulary, translates it to your native language, and quizzes you until every word is locked in memory.</p>
+      <div class="hero-actions">
+        <a href="#upload" class="btn-primary" style="font-size:15px;padding:14px 34px;text-decoration:none;">Start Deciphering →</a>
+        <a href="#library" class="hero-ghost-link">View Library</a>
+      </div>
+      <!-- Stats bar -->
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="stat-n">51</span><span class="stat-l">Languages</span></div>
+        <div class="stat-divider"></div>
+        <div class="hero-stat"><span class="stat-n">3</span><span class="stat-l">Quiz Modes</span></div>
+        <div class="stat-divider"></div>
+        <div class="hero-stat"><span class="stat-n">AI</span><span class="stat-l">Memory Hooks</span></div>
+        <div class="stat-divider"></div>
+        <div class="hero-stat"><span class="stat-n">ELI5</span><span class="stat-l">Simplify Mode</span></div>
+      </div>
+    </div>
+
+    <!-- Scroll cue -->
+    <div class="scroll-cue">
+      <div class="scroll-dot-outer"><div class="scroll-dot-inner"></div></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════
+       FEATURE HIGHLIGHTS BAR
+  ════════════════════════════════════════ -->
+  <section class="features-bar reveal-section">
+    <div class="max-w-7xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="feature-chip">
+        <span class="feature-icon">📄</span>
+        <div><div class="feature-chip-title">PDF Upload</div><div class="feature-chip-sub">Drag & drop, 20MB</div></div>
+      </div>
+      <div class="feature-chip">
+        <span class="feature-icon">💡</span>
+        <div><div class="feature-chip-title">Memory Hooks</div><div class="feature-chip-sub">AI mnemonics per word</div></div>
+      </div>
+      <div class="feature-chip">
+        <span class="feature-icon">🔍</span>
+        <div><div class="feature-chip-title">ELI5 Simplifier</div><div class="feature-chip-sub">Rewrite any passage</div></div>
+      </div>
+      <div class="feature-chip">
+        <span class="feature-icon">📝</span>
+        <div><div class="feature-chip-title">Smart Quiz</div><div class="feature-chip-sub">AI fill-in-the-blank</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════
+       MAIN APP
+  ════════════════════════════════════════ -->
+  <main class="relative z-10 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
 
     <!-- PDF Upload -->
-    <section id="upload" class="mb-8 fade-in">
+    <section id="upload" class="mb-8 reveal-section">
       <div class="glass rounded-2xl p-6">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
           <div style="width:38px;height:38px;border-radius:10px;background:var(--accent-muted);border:1px solid rgba(6,182,212,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;">📄</div>
@@ -94,16 +165,16 @@
     </section>
 
     <!-- Analyzer -->
-    <section id="analyzer" class="grid lg:grid-cols-2 gap-6 mb-20">
+    <section id="analyzer" class="grid lg:grid-cols-2 gap-6 mb-20 reveal-section">
 
       <!-- Left: Input -->
       <div class="fade-in">
         <div class="glass rounded-2xl p-6 h-full flex flex-col">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">Reading Passage</h3>
-            <button id="sampleBtn" style="font-size:12px;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Load Sample</button>
+            <button id="sampleBtn" class="sample-btn">Load Sample</button>
           </div>
-          <textarea id="inputText" class="input-box flex-grow" style="min-height:260px;margin-bottom:10px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
+          <textarea id="inputText" class="input-box flex-grow" style="min-height:220px;margin-bottom:10px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
           <!-- Simplify Bar -->
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
             <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🔍 Simplify:</span>
@@ -150,7 +221,7 @@
           </div>
 
           <!-- Translation Bar -->
-          <div id="translationBar" class="hidden" style="padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+          <div id="translationBar" style="display:none;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:10px;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🌐 Translate to:</span>
               <select id="langSelect" class="lang-select" style="flex:1;min-width:160px;"></select>
@@ -173,7 +244,7 @@
     </section>
 
     <!-- Library -->
-    <section id="library" class="fade-in">
+    <section id="library" class="reveal-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
         <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;">My Library</h2>
         <button id="clearLibBtn" style="font-size:12px;color:rgba(248,113,113,0.55);background:none;border:none;cursor:pointer;transition:color .2s;display:none;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='rgba(248,113,113,0.55)'">Clear Library</button>
@@ -184,7 +255,9 @@
     </section>
   </main>
 
-  <!-- Quiz Modal -->
+  <!-- ════════════════════════════════════════
+       QUIZ MODAL
+  ════════════════════════════════════════ -->
   <div id="quizModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Vocabulary Quiz">
     <div class="glass rounded-2xl w-full max-w-lg p-8 relative" id="quizContent">
       <button id="closeQuiz" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;transition:color .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Close quiz">✕</button>
@@ -213,7 +286,7 @@
           <span>Score: <span id="currentScore">0</span></span>
         </div>
         <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;margin-bottom:24px;">
-          <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--accent),#ff6b35);width:0;transition:width .5s ease;border-radius:99px;"></div>
+          <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--secondary));width:0;transition:width .5s ease;border-radius:99px;"></div>
         </div>
         <h4 id="questionText" style="font-size:16px;font-weight:600;margin-bottom:20px;text-align:center;line-height:1.5;"></h4>
         <div id="optionsContainer" class="space-y-3"></div>
