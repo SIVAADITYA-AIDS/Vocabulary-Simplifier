@@ -16,18 +16,19 @@ import { showToast } from './toast.js';
  * @param {Array|null} translated - [{term, translatedDef, translatedContext, culturalNote, mirrorWord}]
  * @param {string} langName    - display name of target language (e.g. "Spanish")
  */
-export function renderResults(vocabArray, elements, translated = null, langName = '') {
+export function renderResults(vocabArray, elements, translated = null, langName = '', mnemonics = null) {
   const { resultsBox, wordCountBadge, startQuizBtn, generateStoryBtn, storyContainer, saveBtn } = elements;
   if (!vocabArray || vocabArray.length === 0) return;
 
-  // Build a lookup map for translated data
+  // Build lookup maps
   const translatedMap = {};
-  if (translated) {
-    translated.forEach(t => { translatedMap[t.term.toLowerCase()] = t; });
-  }
+  if (translated) translated.forEach(t => { translatedMap[t.term.toLowerCase()] = t; });
+  const mnemonicMap = {};
+  if (mnemonics) mnemonics.forEach(m => { mnemonicMap[m.term.toLowerCase()] = m; });
 
   resultsBox.innerHTML = vocabArray.map((item, i) => {
     const t = translatedMap[item.term.toLowerCase()] || null;
+    const mn = mnemonicMap[item.term.toLowerCase()] || null;
     const hasTranslation = !!t;
     const hasCulturalNote = hasTranslation && t.culturalNote && t.culturalNote.trim();
     const hasMirrorWord = hasTranslation && t.mirrorWord && t.mirrorWord.nativeWord;
@@ -50,6 +51,14 @@ export function renderResults(vocabArray, elements, translated = null, langName 
           </button>` : ''}
         </div>
       </div>
+
+      <!-- Mnemonic / Memory Hook -->
+      ${mn ? `
+      <button class="mnemonic-toggle" data-target="mnemonic-${i}">
+        💡 Memory Hook <span class="chevron">▾</span>
+      </button>
+      <div class="mnemonic-box hidden" id="mnemonic-${i}">${mn.mnemonic}</div>
+      ` : ''}
 
       <!-- English panel (always visible by default) -->
       <div class="vocab-panel vocab-panel-en" id="panel-en-${i}">
@@ -119,6 +128,16 @@ export function renderResults(vocabArray, elements, translated = null, langName 
 
   // Cultural note toggles
   resultsBox.querySelectorAll('.cultural-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      const chevron = btn.querySelector('.chevron');
+      target.classList.toggle('hidden');
+      chevron.textContent = target.classList.contains('hidden') ? '▾' : '▴';
+    });
+  });
+
+  // Mnemonic / Memory Hook toggles
+  resultsBox.querySelectorAll('.mnemonic-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(btn.dataset.target);
       const chevron = btn.querySelector('.chevron');

@@ -103,7 +103,24 @@
             <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">Reading Passage</h3>
             <button id="sampleBtn" style="font-size:12px;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Load Sample</button>
           </div>
-          <textarea id="inputText" class="input-box flex-grow" style="min-height:280px;margin-bottom:14px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
+          <textarea id="inputText" class="input-box flex-grow" style="min-height:260px;margin-bottom:10px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
+          <!-- Simplify Bar -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🔍 Simplify:</span>
+            <select id="simplifyLevel" style="flex:1;min-width:140px;appearance:none;background:rgba(4,9,20,0.7);border:1px solid var(--border);color:var(--text-main);border-radius:8px;padding:8px 12px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;">
+              <option value="plain">Plain English</option>
+              <option value="eli5">Explain Like I'm 5</option>
+            </select>
+            <button id="simplifyBtn" class="btn-secondary" style="padding:8px 16px;font-size:12px;">Rewrite Passage</button>
+          </div>
+          <!-- Simplified Result -->
+          <div id="simplifyResult" style="display:none;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.2);border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px;line-height:1.6;color:var(--text-main);position:relative;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span id="simplifyLevelLabel" style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;">SIMPLIFIED</span>
+              <button id="useSimplifiedBtn" style="font-size:11px;padding:3px 10px;background:rgba(6,182,212,0.15);border:1px solid var(--border);border-radius:6px;color:var(--accent);cursor:pointer;">Use as Input</button>
+            </div>
+            <p id="simplifyText" style="margin:0;"></p>
+          </div>
           <div style="display:flex;gap:10px;">
             <select id="themeSelect" class="input-box" style="width:36%;padding:10px 14px;background:var(--surface);cursor:pointer;font-size:13px;">
               <option value="General">General</option>
@@ -126,6 +143,7 @@
               Extracted Words <span id="wordCountBadge" style="font-size:13px;font-weight:400;color:var(--text-muted);">(0)</span>
             </h3>
             <div style="display:flex;gap:12px;align-items:center;">
+              <button id="mnemonicBtn" style="font-size:13px;color:var(--secondary);background:none;border:none;cursor:pointer;opacity:.5;display:none;font-family:'Inter',sans-serif;" disabled>💡 Memory Hooks</button>
               <button id="generateStoryBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;display:none;font-family:'Inter',sans-serif;" disabled>Generate Story</button>
               <button id="startQuizBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;font-family:'Inter',sans-serif;" disabled>Start Quiz</button>
             </div>
@@ -175,8 +193,10 @@
       <div class="quiz-mode-tabs">
         <button id="modeStandard" class="mode-tab mode-active">📘 Standard</button>
         <button id="modeReverse" class="mode-tab">🔄 Reverse</button>
+        <button id="modeSRS" class="mode-tab">📝 Smart Quiz</button>
       </div>
-      <p id="reverseUnavailNote">Translate words first to unlock Reverse Mode</p>
+      <p id="reverseUnavailNote" style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:-8px;margin-bottom:6px;">Translate words first to unlock Reverse Mode</p>
+      <p id="srsUnavailNote" style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:8px;">Generate Memory Hooks first to unlock Smart Quiz</p>
 
       <!-- Start Screen -->
       <div id="quizStartScreen" class="text-center">

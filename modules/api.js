@@ -120,6 +120,70 @@ export async function generateStory(words) {
 }
 
 // --------------------
+// Memory Hooks (Mnemonics)
+// --------------------
+/**
+ * Generate creative memory hooks for each vocabulary word.
+ * @param {Array} vocabList - [{term, def}]
+ * @returns {Promise<Array>} [{term, mnemonic}]
+ */
+export async function generateMnemonics(vocabList) {
+  const response = await fetch(`${API_BASE}/mnemonic`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vocabList }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Mnemonic generation failed.' }));
+    throw new Error(err.error || 'Mnemonic generation failed.');
+  }
+  return response.json();
+}
+
+// --------------------
+// Passage Simplifier
+// --------------------
+/**
+ * Simplify a passage into Plain English or ELI5.
+ * @param {string} text
+ * @param {'plain'|'eli5'} level
+ * @returns {Promise<{simplified: string, level: string}>}
+ */
+export async function simplifyPassage(text, level = 'plain') {
+  const response = await fetch(`${API_BASE}/simplify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, level }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Simplification failed.' }));
+    throw new Error(err.error || 'Simplification failed.');
+  }
+  return response.json();
+}
+
+// --------------------
+// SRS Quiz Questions
+// --------------------
+/**
+ * Generate fill-in-the-blank SRS quiz sentences for each word.
+ * @param {Array} vocabList - [{term, def}]
+ * @returns {Promise<Array>} [{term, sentence}]
+ */
+export async function generateSRSQuestions(vocabList) {
+  const response = await fetch(`${API_BASE}/srs-questions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vocabList }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'SRS generation failed.' }));
+    throw new Error(err.error || 'SRS generation failed.');
+  }
+  return response.json();
+}
+
+// --------------------
 // Library (History)
 // --------------------
 /**

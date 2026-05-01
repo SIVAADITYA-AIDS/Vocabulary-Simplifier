@@ -239,6 +239,123 @@ app.post('/api/translate', async (req, res) => {
   }
 });
 
+// --- MEMORY HOOK / MNEMONIC GENERATOR ---
+app.post('/api/mnemonic', async (req, res) => {
+  const { vocabList } = req.body;
+  if (!vocabList || !Array.isArray(vocabList) || vocabList.length === 0) {
+    return res.status(400).json({ error: 'No vocabulary list provided.' });
+  }
+  try {
+    const prompt = `
+      You are a creative memory coach and linguistics expert. For each vocabulary word, create a vivid, memorable "Memory Hook" — a fun mental image, wordplay, or short story that connects the word's sound/spelling directly to its meaning.
+
+      Rules:
+      - Keep each mnemonic to 1-2 punchy sentences.
+      - Use vivid imagery, humor, or surprising wordplay where possible.
+      - The hook should make the meaning instantly recalled.
+      - Do NOT just restate the definition. Be creative!
+
+      Example: "Gregarious" (def: sociable, fond of company) →
+      Mnemonic: "Think of GREG who's always HILARIOUS at parties — he never shuts up because he loves being around people!"
+
+      Words to process:
+      ${JSON.stringify(vocabList.map(v => ({ term: v.term, def: v.def })))}
+    `;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              term:     { type: 'STRING' },
+              mnemonic: { type: 'STRING' }
+            },
+            required: ['term', 'mnemonic']
+          }
+        }
+      }
+    });
+    res.json(JSON.parse(response.text));
+  } catch (err) {
+    console.error('Mnemonic error:', err);
+    res.status(500).json({ error: 'Memory hook generation failed.' });
+  }
+});
+
+// --- PASSAGE SIMPLIFIER (ELI5 / PLAIN ENGLISH) ---
+app.post('/api/simplify', async (req, res) => {
+  const { text, level } = req.body;
+  if (!text || text.length < 20) return res.status(400).json({ error: 'Text too short.' });
+
+  const levelInstruction = level === 'eli5'
+    ? 'Rewrite this passage as if explaining to a curious, bright 12-year-old. Use simple everyday words, fun analogies, short sentences, and a conversational tone. Keep ALL the core ideas.'
+    : 'Rewrite this passage in clear, straightforward Modern English (B1–B2 level). Remove jargon, complex syntax, and archaic language. Keep all ideas intact — just make them easy to read.';
+
+  try {
+    const prompt = `${levelInstruction}\n\nPassage:\n"${text}"\n\nReturn ONLY the rewritten passage as plain text — no headings, no bullet points, no formatting.`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    res.json({ simplified: response.text.trim(), level });
+  } catch (err) {
+    console.error('Simplify error:', err);
+    res.status(500).json({ error: 'Simplification failed.' });
+  }
+});
+
+// --- SRS (SPACED REPETITION) QUIZ QUESTION BATCH GENERATOR ---
+app.post('/api/srs-questions', async (req, res) => {
+  const { vocabList } = req.body;
+  if (!vocabList || !Array.isArray(vocabList) || vocabList.length === 0) {
+    return res.status(400).json({ error: 'No vocabulary list provided.' });
+  }
+  try {
+    const prompt = `
+      You are a language quiz designer. For each vocabulary word below, create ONE fill-in-the-blank sentence.
+
+      Rules:
+      - Use ___ (three underscores) to mark exactly where the word goes.
+      - The sentence must be realistic: a news headline, business email, academic text, or everyday conversation.
+      - Context clues should make the meaning inferable but NOT give away the word directly.
+      - Each sentence must be 10–22 words long.
+      - Do NOT include the actual word anywhere else in the sentence.
+
+      Example: "proliferate" →
+      "Social media platforms continue to ___ at an astonishing rate, with millions of new accounts created daily."
+
+      Words:
+      ${JSON.stringify(vocabList.map(v => ({ term: v.term, def: v.def })))}
+    `;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              term:     { type: 'STRING' },
+              sentence: { type: 'STRING' }
+            },
+            required: ['term', 'sentence']
+          }
+        }
+      }
+    });
+    res.json(JSON.parse(response.text));
+  } catch (err) {
+    console.error('SRS error:', err);
+    res.status(500).json({ error: 'SRS question generation failed.' });
+  }
+});
+
 // NEW: Contextual Story Generation
 app.post('/api/story', async (req, res) => {
   const { words } = req.body;

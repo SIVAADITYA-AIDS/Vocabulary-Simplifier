@@ -152,6 +152,18 @@ h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;}
 .toast-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px;flex-shrink:0;transition:color .2s;}
 .toast-close:hover{color:#fff;}
 
+/* Mnemonic / Memory Hook */
+.mnemonic-toggle{display:flex;align-items:center;gap:6px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);color:var(--secondary);font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;cursor:pointer;margin-top:8px;width:100%;transition:background .2s;}
+.mnemonic-toggle:hover{background:rgba(167,139,250,.14);}
+.mnemonic-box{background:rgba(167,139,250,.06);border-left:2px solid var(--secondary);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12px;color:var(--text-main);line-height:1.6;margin-top:6px;font-style:italic;}
+
+/* SRS Sentence */
+.srs-sentence{font-size:15px;font-weight:500;color:var(--text-main);line-height:1.6;display:block;margin-top:8px;}
+
+/* SRS mode tab active */
+#modeSRS.mode-active{background:linear-gradient(135deg,var(--accent),var(--secondary));border-color:transparent;color:#fff;}
+#modeSRS:hover:not(.mode-active){border-color:var(--accent);}
+
 /* Spin */
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .animate-spin{animation:spin 1s linear infinite;}
