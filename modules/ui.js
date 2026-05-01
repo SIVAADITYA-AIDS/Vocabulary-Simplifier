@@ -62,7 +62,12 @@ export function renderResults(vocabArray, elements, translated = null, langName 
 
       <!-- English panel (always visible by default) -->
       <div class="vocab-panel vocab-panel-en" id="panel-en-${i}">
-        <p class="vocab-def">${item.def}</p>
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">
+          <p class="vocab-def" style="flex:1;margin:0;">${item.def}</p>
+          <button class="speak-btn" data-word="${item.def}" data-type="def" title="Read definition aloud" aria-label="Speak definition" style="flex-shrink:0;font-size:13px;">🔈</button>
+          <button class="mic-btn" data-word="${item.term}" data-index="${i}" title="Practice pronunciation" aria-label="Record pronunciation" style="font-size:14px;">🎤</button>
+        </div>
+        <div id="pronun-result-${i}" style="margin-bottom:4px;min-height:4px;"></div>
         <p class="vocab-syn"><span class="syn-label">Syn:</span> ${item.syn}</p>
         <p class="vocab-context">${item.context}</p>
       </div>
@@ -143,6 +148,54 @@ export function renderResults(vocabArray, elements, translated = null, langName 
       const chevron = btn.querySelector('.chevron');
       target.classList.toggle('hidden');
       chevron.textContent = target.classList.contains('hidden') ? '▾' : '▴';
+    });
+  });
+
+  // Definition TTS buttons (🔈)
+  resultsBox.querySelectorAll('[data-type="def"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const txt = btn.dataset.word;
+      if (!txt) return;
+      const utt = new SpeechSynthesisUtterance(txt);
+      utt.lang = 'en-US'; utt.rate = 0.88;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utt);
+    });
+  });
+
+  // Pronunciation mic buttons (🎤)
+  resultsBox.querySelectorAll('.mic-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const word = btn.dataset.word;
+      const idx  = btn.dataset.index;
+      const resultEl = document.getElementById('pronun-result-' + idx);
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { showToast('Speech recognition not supported in this browser.', 'warning'); return; }
+      const rec = new SR();
+      rec.lang = 'en-US'; rec.maxAlternatives = 1; rec.interimResults = false;
+      btn.classList.add('listening');
+      btn.title = 'Listening...';
+      rec.start();
+      rec.onresult = (e) => {
+        const said = e.results[0][0].transcript.toLowerCase().trim();
+        const target = word.toLowerCase();
+        const score = (() => {
+          if (said === target) return 100;
+          const maxL = Math.max(said.length, target.length);
+          let dp = Array.from({length: said.length+1}, (_,i) => [i]);
+          for (let j=0; j<=target.length; j++) dp[0][j]=j;
+          for (let i=1; i<=said.length; i++)
+            for (let j=1; j<=target.length; j++)
+              dp[i][j] = said[i-1]===target[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+          return Math.max(0, Math.round((1 - dp[said.length][target.length] / maxL) * 100));
+        })();
+        const cls = score >= 85 ? 'great' : score >= 60 ? 'ok' : 'miss';
+        const emoji = score >= 85 ? '✅' : score >= 60 ? '⚡' : '❌';
+        const msg = score >= 85 ? 'Great!' : score >= 60 ? 'Close!' : 'Try again';
+        resultEl.innerHTML = `<span class="pronun-badge ${cls}">${emoji} ${score}% — ${msg} <span style="opacity:.6;font-size:9px;">(heard: "${said}")</span></span>`;
+      };
+      rec.onerror = () => { resultEl.innerHTML = '<span style="font-size:11px;color:var(--red);">Could not hear you. Try again.</span>'; };
+      rec.onend = () => { btn.classList.remove('listening'); btn.title = 'Practice pronunciation'; };
     });
   });
 }

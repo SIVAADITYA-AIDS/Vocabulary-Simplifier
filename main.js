@@ -8,7 +8,8 @@ import {
   analyzeText, extractPdfText, generateStory,
   saveSession, fetchLibrary, fetchSession, clearLibrary,
   translateVocabList, generateMnemonics, simplifyPassage,
-  generateSRSQuestions, SPINNER_SVG
+  generateSRSQuestions, SPINNER_SVG,
+  extractImageText, fetchYouTubeTranscript, sendChatMessage, generateOppositeDay
 } from './modules/api.js';
 import { initAuth, handleAuthButtonClick, getCurrentUser } from './modules/auth.js';
 import {
@@ -66,6 +67,21 @@ const simplifyLevel    = document.getElementById('simplifyLevel');
 const useSimplifiedBtn = document.getElementById('useSimplifiedBtn');
 
 const uiElements = { resultsBox, wordCountBadge, startQuizBtn, generateStoryBtn, storyContainer, saveBtn };
+
+// New feature DOM refs
+const oppositeDayBtn   = document.getElementById('oppositeDayBtn');
+const imageUploadBtn   = document.getElementById('imageUploadBtn');
+const imageUploadInput = document.getElementById('imageUploadInput');
+const imageFileName    = document.getElementById('imageFileName');
+const youtubeLoadBtn   = document.getElementById('youtubeLoadBtn');
+const youtubeUrl       = document.getElementById('youtubeUrl');
+const ytStatus         = document.getElementById('ytStatus');
+const tutorFab         = document.getElementById('tutorFab');
+const tutorPanel       = document.getElementById('tutorPanel');
+const tutorClose       = document.getElementById('tutorClose');
+const tutorMessages    = document.getElementById('tutorMessages');
+const tutorInput       = document.getElementById('tutorInput');
+const tutorSend        = document.getElementById('tutorSend');
 
 // ======================
 // State
@@ -202,6 +218,7 @@ analyzeBtn.addEventListener('click', async () => {
   currentTranslated = []; currentMnemonics = []; currentLangName = '';
   translationBar.style.display = 'none';
   mnemonicBtn.style.display = 'none';
+  if (oppositeDayBtn) { oppositeDayBtn.style.display = 'none'; }
   setTranslatedVocabList([]);
   setSRSQuestions([]);
 
@@ -213,6 +230,7 @@ analyzeBtn.addEventListener('click', async () => {
     mnemonicBtn.style.display = 'inline';
     mnemonicBtn.disabled = false;
     mnemonicBtn.style.opacity = '1';
+    if (oppositeDayBtn) { oppositeDayBtn.style.display = 'inline'; oppositeDayBtn.disabled = false; oppositeDayBtn.style.opacity = '1'; }
   } catch (err) {
     showToast(`Analysis failed: ${err.message}`, 'error');
     resultsBox.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#f87171;">Analysis failed. Please try again.</div>`;
@@ -376,6 +394,168 @@ sampleBtn.addEventListener('click', () => {
   simplifyResult.style.display = 'none';
   showToast('Sample text loaded!', 'info', 2000);
 });
+
+// ======================
+// THEME TOGGLE
+// ======================
+(function initTheme() {
+  const saved = localStorage.getItem('decipher-theme') || 'dark';
+  document.documentElement.className = 'theme-' + saved;
+  const btn = document.getElementById('theme' + saved.charAt(0).toUpperCase() + saved.slice(1));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.theme-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const t = b.dataset.theme;
+      document.documentElement.className = 'theme-' + t;
+      document.querySelectorAll('.theme-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      localStorage.setItem('decipher-theme', t);
+    });
+  });
+})();
+
+// ======================
+// SOURCE TABS
+// ======================
+document.querySelectorAll('.source-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.source-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.getElementById('panel-' + tab.dataset.src);
+    if (panel) panel.classList.add('active');
+  });
+});
+
+// ======================
+// IMAGE OCR
+// ======================
+if (imageUploadBtn) imageUploadBtn.addEventListener('click', () => imageUploadInput && imageUploadInput.click());
+if (imageUploadInput) {
+  imageUploadInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (imageFileName) { imageFileName.textContent = '📎 ' + file.name; imageFileName.style.display = 'inline'; }
+    const orig = imageUploadBtn.innerHTML;
+    imageUploadBtn.innerHTML = SPINNER_SVG + ' Extracting text...';
+    imageUploadBtn.disabled = true;
+    try {
+      const result = await extractImageText(file);
+      inputText.value = result.text;
+      // Switch to text tab to show the extracted text
+      document.getElementById('srcTabText').click();
+      showToast('Text extracted from image! Review it and click Decipher Text.', 'success', 5000);
+    } catch (err) {
+      showToast('OCR failed: ' + err.message, 'error');
+    } finally {
+      imageUploadBtn.innerHTML = orig;
+      imageUploadBtn.disabled = false;
+      imageUploadInput.value = '';
+    }
+  });
+}
+
+// ======================
+// YOUTUBE TRANSCRIPT
+// ======================
+if (youtubeLoadBtn) {
+  youtubeLoadBtn.addEventListener('click', async () => {
+    const url = youtubeUrl ? youtubeUrl.value.trim() : '';
+    if (!url) { showToast('Please enter a YouTube URL.', 'warning'); return; }
+    const orig = youtubeLoadBtn.innerHTML;
+    youtubeLoadBtn.innerHTML = SPINNER_SVG + ' Loading...';
+    youtubeLoadBtn.disabled = true;
+    if (ytStatus) ytStatus.textContent = 'Fetching transcript...';
+    try {
+      const result = await fetchYouTubeTranscript(url);
+      inputText.value = result.text;
+      document.getElementById('srcTabText').click();
+      if (ytStatus) ytStatus.textContent = '';
+      showToast('Transcript loaded (' + result.wordCount + ' words). Click Decipher Text!', 'success', 5000);
+    } catch (err) {
+      if (ytStatus) ytStatus.textContent = 'Error: ' + err.message;
+      showToast('Transcript failed: ' + err.message, 'error');
+    } finally {
+      youtubeLoadBtn.innerHTML = orig;
+      youtubeLoadBtn.disabled = false;
+    }
+  });
+}
+
+// ======================
+// OPPOSITE DAY
+// ======================
+if (oppositeDayBtn) {
+  oppositeDayBtn.addEventListener('click', async () => {
+    const text = inputText.value.trim();
+    if (!text || currentVocabList.length === 0) { showToast('Analyze some text first.', 'warning'); return; }
+    const orig = oppositeDayBtn.innerHTML;
+    oppositeDayBtn.innerHTML = SPINNER_SVG + ' Flipping...';
+    oppositeDayBtn.disabled = true;
+    try {
+      const result = await generateOppositeDay(text, currentVocabList);
+      // Show result in storyContainer (reuse it)
+      storyContainer.style.display = 'block';
+      storyContainer.innerHTML = '<div class="opposite-label">🔄 Opposite Day — Antonym Rewrite</div><p style="font-size:13px;line-height:1.7;font-style:italic;">' + result.opposite + '</p>';
+      showToast('Opposite Day generated! All words flipped to their antonyms.', 'success', 4000);
+    } catch (err) {
+      showToast('Opposite Day failed: ' + err.message, 'error');
+    } finally {
+      oppositeDayBtn.innerHTML = orig;
+      oppositeDayBtn.disabled = false;
+    }
+  });
+}
+
+// ======================
+// SOCRATIC TUTOR CHAT
+// ======================
+let chatMessages = [];
+
+function appendTutorMsg(role, content) {
+  const el = document.createElement('div');
+  el.className = 'tutor-msg ' + role;
+  el.textContent = content;
+  tutorMessages.appendChild(el);
+  tutorMessages.scrollTop = tutorMessages.scrollHeight;
+}
+
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'tutor-typing'; el.id = 'tutor-typing'; el.textContent = '···';
+  tutorMessages.appendChild(el);
+  tutorMessages.scrollTop = tutorMessages.scrollHeight;
+}
+function removeTyping() { const el = document.getElementById('tutor-typing'); if (el) el.remove(); }
+
+async function sendTutorMessage() {
+  const text = tutorInput.value.trim();
+  if (!text) return;
+  // Clear placeholder
+  if (tutorMessages.querySelector('.tutor-empty')) tutorMessages.innerHTML = '';
+  tutorInput.value = '';
+  chatMessages.push({ role: 'user', content: text });
+  appendTutorMsg('user', text);
+  showTyping();
+  tutorSend.disabled = true;
+  try {
+    const passage = inputText ? inputText.value : '';
+    const result = await sendChatMessage(chatMessages, passage, currentVocabList);
+    removeTyping();
+    chatMessages.push({ role: 'assistant', content: result.reply });
+    appendTutorMsg('ai', result.reply);
+  } catch (err) {
+    removeTyping();
+    appendTutorMsg('ai', 'Sorry, I had trouble responding. Please try again.');
+  } finally {
+    tutorSend.disabled = false;
+  }
+}
+
+if (tutorFab)   tutorFab.addEventListener('click', () => tutorPanel.classList.toggle('open'));
+if (tutorClose) tutorClose.addEventListener('click', () => tutorPanel.classList.remove('open'));
+if (tutorSend)  tutorSend.addEventListener('click', sendTutorMessage);
+if (tutorInput) tutorInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTutorMessage(); } });
 
 // ======================
 // 11. QUIZ EVENTS

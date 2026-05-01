@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,7 +40,12 @@
         <a href="#upload">Upload</a>
         <a href="#analyzer">Analyzer</a>
         <a href="#library">Library</a>
-        <div class="flex items-center gap-3 pl-6" style="border-left:1px solid var(--border);">
+        <div class="theme-switcher">
+          <button class="theme-btn active" data-theme="dark" id="themeDark" title="Cyber Dark">🌑</button>
+          <button class="theme-btn" data-theme="light" id="themeLight" title="Ice Latte">☀️</button>
+          <button class="theme-btn" data-theme="red" id="themeRed" title="Matte Red">🔴</button>
+        </div>
+        <div class="flex items-center gap-3 pl-4" style="border-left:1px solid var(--border);">
           <span id="userNameDisplay" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
           <button id="authBtn" class="nav-auth-btn">Log In</button>
         </div>
@@ -142,39 +147,64 @@
   ════════════════════════════════════════ -->
   <main class="relative z-10 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
 
-    <!-- PDF Upload -->
-    <section id="upload" class="mb-8 reveal-section">
-      <div class="glass rounded-2xl p-6">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <div style="width:38px;height:38px;border-radius:10px;background:var(--accent-muted);border:1px solid rgba(6,182,212,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;">📄</div>
-          <div>
-            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;">Upload PDF or E-book</h3>
-            <p style="font-size:12px;color:var(--text-muted);">Drop a PDF — text is extracted and placed in the analyzer below. Max 20MB.</p>
-          </div>
-        </div>
-        <div id="pdfDropZone" class="drop-zone">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-muted);">
-            <div style="font-size:36px;">📥</div>
-            <p style="font-size:14px;font-weight:500;color:var(--text-main);">Drag &amp; drop your PDF here</p>
-            <button id="pdfUploadBtn" class="btn-primary" style="font-size:13px;padding:8px 20px;">Browse File</button>
-            <span id="pdfFileName" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
-          </div>
-          <input type="file" id="pdfUploadInput" accept=".pdf,.epub" style="display:none;">
-        </div>
-      </div>
-    </section>
-
     <!-- Analyzer -->
     <section id="analyzer" class="grid lg:grid-cols-2 gap-6 mb-20 reveal-section">
 
       <!-- Left: Input -->
       <div class="fade-in">
         <div class="glass rounded-2xl p-6 h-full flex flex-col">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">Reading Passage</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;" id="sourceTitle">Reading Passage</h3>
             <button id="sampleBtn" class="sample-btn">Load Sample</button>
           </div>
-          <textarea id="inputText" class="input-box flex-grow" style="min-height:220px;margin-bottom:10px;" placeholder="Paste your text here, or upload a PDF above..."></textarea>
+          <!-- Source Tabs -->
+          <div class="source-tabs" id="sourceTabs">
+            <button class="source-tab active" data-src="text" id="srcTabText">📝 Text</button>
+            <button class="source-tab" data-src="pdf" id="srcTabPdf">📄 PDF/DOCX</button>
+            <button class="source-tab" data-src="image" id="srcTabImage">📷 Image</button>
+            <button class="source-tab" data-src="youtube" id="srcTabYoutube">🎵 YouTube</button>
+          </div>
+          <!-- Panel: Text (default) -->
+          <div class="source-panel active" id="panel-text">
+            <textarea id="inputText" class="input-box" style="width:100%;min-height:180px;margin-bottom:8px;" placeholder="Paste your text here..."></textarea>
+          </div>
+          <!-- Panel: PDF/DOCX -->
+          <div class="source-panel" id="panel-pdf">
+            <div id="pdfDropZone" class="drop-zone" style="padding:20px;margin-bottom:8px;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--text-muted);">
+                <div style="font-size:32px;">📥</div>
+                <p style="font-size:13px;font-weight:500;color:var(--text-main);">Drag &amp; drop PDF or DOCX here</p>
+                <button id="pdfUploadBtn" class="btn-primary" style="font-size:13px;padding:8px 18px;">Browse File</button>
+                <span id="pdfFileName" style="font-size:11px;color:var(--accent);font-weight:600;display:none;"></span>
+                <p style="font-size:11px;color:var(--text-muted);">PDF · DOCX · Up to 100 MB</p>
+              </div>
+              <input type="file" id="pdfUploadInput" accept=".pdf,.epub,.docx" style="display:none;">
+            </div>
+          </div>
+          <!-- Panel: Image OCR -->
+          <div class="source-panel" id="panel-image">
+            <div class="drop-zone" id="imageDropZone" style="padding:20px;margin-bottom:8px;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <div style="font-size:32px;">📷</div>
+                <p style="font-size:13px;font-weight:500;color:var(--text-main);">Upload a photo of text</p>
+                <p style="font-size:11px;color:var(--text-muted);">Works with textbook pages, screenshots, handwritten notes</p>
+                <button id="imageUploadBtn" class="btn-primary" style="font-size:13px;padding:8px 18px;">Choose Image</button>
+                <span id="imageFileName" style="font-size:11px;color:var(--accent);font-weight:600;display:none;"></span>
+              </div>
+              <input type="file" id="imageUploadInput" accept="image/*" style="display:none;">
+            </div>
+          </div>
+          <!-- Panel: YouTube -->
+          <div class="source-panel" id="panel-youtube">
+            <div style="margin-bottom:8px;">
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Paste a YouTube URL with captions. Transcript will be extracted automatically.</p>
+              <div style="display:flex;gap:8px;">
+                <input type="url" id="youtubeUrl" class="input-box" style="flex:1;padding:10px 14px;" placeholder="https://www.youtube.com/watch?v=...">
+                <button id="youtubeLoadBtn" class="btn-primary" style="padding:10px 16px;font-size:13px;white-space:nowrap;">Load Transcript</button>
+              </div>
+              <p id="ytStatus" style="font-size:11px;color:var(--text-muted);margin-top:6px;"></p>
+            </div>
+          </div>
           <!-- Simplify Bar -->
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
             <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">🔍 Simplify:</span>
@@ -215,6 +245,7 @@
             </h3>
             <div style="display:flex;gap:12px;align-items:center;">
               <button id="mnemonicBtn" style="font-size:13px;color:var(--secondary);background:none;border:none;cursor:pointer;opacity:.5;display:none;font-family:'Inter',sans-serif;" disabled>💡 Memory Hooks</button>
+              <button id="oppositeDayBtn" style="font-size:13px;color:var(--amber);background:none;border:none;cursor:pointer;opacity:.5;display:none;font-family:'Inter',sans-serif;" disabled>🔄 Opposite Day</button>
               <button id="generateStoryBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;display:none;font-family:'Inter',sans-serif;" disabled>Generate Story</button>
               <button id="startQuizBtn" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;opacity:.5;font-family:'Inter',sans-serif;" disabled>Start Quiz</button>
             </div>
@@ -306,6 +337,24 @@
 
   <!-- Toast Container -->
   <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Tutor Chat FAB -->
+  <button class="tutor-fab" id="tutorFab" title="Ask the AI Tutor">🤖</button>
+
+  <!-- Tutor Chat Panel -->
+  <div class="tutor-panel" id="tutorPanel">
+    <div class="tutor-header">
+      <div class="tutor-title">🤖 Socratic Tutor</div>
+      <button class="tutor-close" id="tutorClose">✕</button>
+    </div>
+    <div class="tutor-messages" id="tutorMessages">
+      <div class="tutor-empty">Hi! Ask me anything about the words or passage you're studying. I'll explain using examples and analogies.</div>
+    </div>
+    <div class="tutor-input-row">
+      <textarea class="tutor-input" id="tutorInput" placeholder="Ask about a word..." rows="1"></textarea>
+      <button class="tutor-send" id="tutorSend">➤</button>
+    </div>
+  </div>
 
   <script src="firebase-config.js"></script>
   <script type="module" src="main.js"></script>

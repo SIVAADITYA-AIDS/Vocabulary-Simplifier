@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+const { YoutubeTranscript } = require('youtube-transcript');
 const path = require('path');
 const { GoogleGenAI } = require('@google/genai');
 const admin = require('firebase-admin');
@@ -12,23 +14,30 @@ const PORT = process.env.PORT || 3000;
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Multer: store uploads in memory (no disk writes), max 20 MB
+// Multer instances — memory storage
 const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = require('path').extname(file.originalname).toLowerCase();
+    if (['.pdf','.epub','.docx'].includes(ext) ||
+        file.mimetype === 'application/pdf' ||
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+      cb(null, true);
+    else cb(new Error('Only PDF, DOCX and EPUB files are supported.'));
+  }
+});
+const uploadImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.epub'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext) || file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF and EPUB files are supported.'));
-    }
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are supported for OCR.'));
   }
 });
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('.'));
 
 // --- CONNECT TO FIREBASE ---
@@ -79,7 +88,7 @@ app.post('/api/analyze', async (req, res) => {
     const prompt = `
       You are an advanced vocabulary extraction tool. 
       Read the following text and extract the most difficult, complex, or advanced vocabulary words. 
-      Limit the extraction to a maximum of 15 words.
+      Limit the extraction to a maximum of 25 words.
       ${themePrompt}
       For each word, provide:
       1. The word itself (term)
@@ -132,13 +141,13 @@ app.post('/api/extract-pdf', upload.single('document'), async (req, res) => {
       }
 
       // Limit to first ~6000 characters to stay within AI token budgets
-      const truncated = data.text.replace(/\s+/g, ' ').trim().slice(0, 6000);
+      const truncated = data.text.replace(/\s+/g, ' ').trim().slice(0, 20000);
 
       return res.json({
         text: truncated,
         pageCount: data.numpages,
         fileName: req.file.originalname,
-        truncated: data.text.length > 6000
+        truncated: data.text.length > 20000
       });
     }
 
@@ -161,7 +170,7 @@ app.post('/api/extract-pdf', upload.single('document'), async (req, res) => {
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'File too large. Maximum size is 20MB.' });
+      return res.status(413).json({ error: 'File too large. Maximum size is 100MB for documents, 20MB for images.' });
     }
     return res.status(400).json({ error: `Upload error: ${err.message}` });
   }
@@ -353,6 +362,102 @@ app.post('/api/srs-questions', async (req, res) => {
   } catch (err) {
     console.error('SRS error:', err);
     res.status(500).json({ error: 'SRS question generation failed.' });
+  }
+});
+
+// --- IMAGE OCR (Gemini Vision) ---
+app.post('/api/ocr', uploadImage.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded.' });
+  try {
+    const b64 = req.file.buffer.toString('base64');
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ parts: [
+        { text: 'Extract ALL readable text from this image exactly as it appears. Return ONLY the raw text, no commentary, no formatting.' },
+        { inlineData: { mimeType: req.file.mimetype, data: b64 } }
+      ]}]
+    });
+    const text = response.text.trim();
+    if (!text || text.length < 10) return res.status(422).json({ error: 'Could not read text from this image. Please use a clearer photo.' });
+    res.json({ text });
+  } catch (err) {
+    console.error('OCR error:', err);
+    res.status(500).json({ error: 'Image text extraction failed.' });
+  }
+});
+
+// --- YOUTUBE / URL TRANSCRIPT ---
+app.post('/api/youtube-transcript', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'No URL provided.' });
+  try {
+    const transcript = await YoutubeTranscript.fetchTranscript(url, { lang: 'en' });
+    const text = transcript.map(t => t.text).join(' ').replace(/\s+/g, ' ').trim();
+    if (!text || text.length < 20) return res.status(422).json({ error: 'No captions found for this video. Please try a video with captions/subtitles enabled.' });
+    res.json({ text: text.slice(0, 20000), wordCount: text.split(' ').length });
+  } catch (err) {
+    console.error('YouTube transcript error:', err);
+    res.status(400).json({ error: 'Could not fetch transcript. Ensure the YouTube video has captions enabled and the URL is correct.' });
+  }
+});
+
+// --- SOCRATIC TUTOR CHAT ---
+app.post('/api/chat', async (req, res) => {
+  const { messages, passage, vocabList } = req.body;
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'No messages provided.' });
+  }
+  const contextWords = vocabList ? vocabList.map(v => `"${v.term}" (${v.def})`).join('; ') : 'None';
+  const passageSnippet = passage ? passage.substring(0, 1000) : 'No passage loaded.';
+  const systemPrompt = `You are a Socratic Tutor for a vocabulary learning app called Decipher.
+Active reading passage (first 1000 chars): "${passageSnippet}"
+Vocabulary words being studied: ${contextWords}
+
+Your role:
+- Help students understand complex words and concepts from this specific passage
+- Use vivid analogies and real-world examples
+- Ask occasional follow-up questions to deepen understanding (Socratic method)
+- Keep responses friendly, encouraging, and concise (2-4 sentences for simple questions)
+- If asked about a word in the vocab list, always connect it back to the passage context`;
+
+  try {
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+    const lastMessage = messages[messages.length - 1].content;
+    const fullPrompt = `${systemPrompt}\n\nStudent asks: ${lastMessage}`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: history.length > 0
+        ? [...history, { role: 'user', parts: [{ text: fullPrompt }] }]
+        : fullPrompt
+    });
+    res.json({ reply: response.text.trim() });
+  } catch (err) {
+    console.error('Chat error:', err);
+    res.status(500).json({ error: 'Tutor is unavailable. Please try again.' });
+  }
+});
+
+// --- OPPOSITE DAY GENERATOR ---
+app.post('/api/opposite-day', async (req, res) => {
+  const { text, vocabList } = req.body;
+  if (!text || text.length < 20) return res.status(400).json({ error: 'Text too short.' });
+  const terms = vocabList && vocabList.length > 0
+    ? `Focus on replacing these key words with their opposites: ${vocabList.map(v => v.term).join(', ')}.`
+    : '';
+  try {
+    const prompt = `Rewrite this passage by replacing vocabulary words with their antonyms or opposite concepts. Make the result subtly absurd and fun — the meaning should flip but the sentence structure should stay readable. ${terms}
+
+Original: "${text}"
+
+Return ONLY the rewritten passage as plain text.`;
+    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+    res.json({ opposite: response.text.trim() });
+  } catch (err) {
+    console.error('Opposite day error:', err);
+    res.status(500).json({ error: 'Opposite Day generation failed.' });
   }
 });
 

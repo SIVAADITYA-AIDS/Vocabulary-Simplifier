@@ -249,3 +249,64 @@ export async function clearLibrary() {
   }
   return response.json();
 }
+// --------------------
+// Image OCR
+// --------------------
+export async function extractImageText(imageFile) {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  const response = await fetch(`${API_BASE}/ocr`, { method: 'POST', body: formData });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'OCR failed.' }));
+    throw new Error(err.error || 'Image text extraction failed.');
+  }
+  return response.json();
+}
+
+// --------------------
+// YouTube Transcript
+// --------------------
+export async function fetchYouTubeTranscript(url) {
+  const response = await fetch(`${API_BASE}/youtube-transcript`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Transcript fetch failed.' }));
+    throw new Error(err.error || 'Could not fetch transcript.');
+  }
+  return response.json();
+}
+
+// --------------------
+// Socratic Tutor Chat
+// --------------------
+export async function sendChatMessage(messages, passage, vocabList) {
+  const response = await fetch(`${API_BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, passage, vocabList }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Chat failed.' }));
+    throw new Error(err.error || 'Tutor unavailable.');
+  }
+  return response.json();
+}
+
+// --------------------
+// Opposite Day
+// --------------------
+export async function generateOppositeDay(text, vocabList) {
+  const response = await fetch(`${API_BASE}/opposite-day`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, vocabList }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Opposite Day failed.' }));
+    throw new Error(err.error || 'Generation failed.');
+  }
+  return response.json();
+}
