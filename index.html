@@ -6,7 +6,7 @@
   <meta name="description" content="Decipher – AI-powered vocabulary tool. Upload any text or PDF, get contextual definitions, translate to your language, and quiz yourself.">
   <title>Decipher | Unlock Any Text</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
@@ -16,14 +16,14 @@
   <!-- ════════════════════════════════════════
        NAVIGATION
   ════════════════════════════════════════ -->
-  <nav class="fixed top-0 w-full z-50 glass" style="border-bottom:1px solid var(--border);">
+  <nav class="fixed top-0 w-full z-50 liquid-glass" style="border-bottom:1px solid var(--border);">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="decipher-logo" aria-hidden="true">
           <defs>
             <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#06b6d4"/>
-              <stop offset="100%" stop-color="#0369a1"/>
+              <stop offset="0%" stop-color="var(--logo-c1,#06b6d4)"/>
+              <stop offset="100%" stop-color="var(--logo-c2,#0369a1)"/>
             </linearGradient>
           </defs>
           <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
@@ -34,7 +34,7 @@
           <path d="M31 24 L31 31 L24 31" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
           <text x="9" y="26" font-family="Arial Black,sans-serif" font-size="20" font-weight="900" fill="white">D</text>
         </svg>
-        <span style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px;">Decipher</span>
+        <span style="font-family:'Instrument Serif',serif;font-style:italic;font-weight:600;font-size:24px;letter-spacing:-0.5px;">Decipher</span>
       </div>
       <div class="flex items-center gap-6">
         <a href="#upload">Upload</a>
@@ -57,8 +57,10 @@
        CINEMATIC HERO
   ════════════════════════════════════════ -->
   <section class="hero-cinematic" id="heroSection">
-    <!-- Background image layer (parallax) -->
-    <div class="hero-bg-layer" id="heroBg"></div>
+    <!-- Background video layer -->
+    <video autoPlay loop muted playsInline class="hero-bg-video">
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4" type="video/mp4">
+    </video>
     <!-- Dark overlay gradient -->
     <div class="hero-overlay"></div>
 
@@ -97,7 +99,7 @@
       </h1>
       <p class="hero-desc">Upload a PDF or paste any passage. AI extracts vocabulary, translates it to your native language, and quizzes you until every word is locked in memory.</p>
       <div class="hero-actions">
-        <a href="#upload" class="btn-primary" style="font-size:15px;padding:14px 34px;text-decoration:none;">Start Deciphering →</a>
+        <a href="#upload" class="btn-primary liquid-glass-strong" style="font-size:15px;padding:14px 34px;text-decoration:none;">Start Deciphering →</a>
         <a href="#library" class="hero-ghost-link">View Library</a>
       </div>
       <!-- Stats bar -->
