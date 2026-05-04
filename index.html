@@ -6,7 +6,7 @@
   <meta name="description" content="Decipher – AI-powered vocabulary tool. Upload any text or PDF, get contextual definitions, translate to your language, and quiz yourself.">
   <title>Decipher | Unlock Any Text</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
@@ -14,103 +14,98 @@
 <body class="bg-mesh">
 
   <!-- ════════════════════════════════════════
-       NAVIGATION
+       NAVIGATION — Glassmorphic floating bar
   ════════════════════════════════════════ -->
-  <nav class="fixed top-0 w-full z-50 liquid-glass" style="border-bottom:1px solid var(--border);">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="decipher-logo" aria-hidden="true">
+  <nav id="mainNav" class="fixed top-0 left-0 right-0 z-50 nav-glass">
+    <div class="max-w-7xl mx-auto px-8 h-[72px] flex items-center justify-between">
+
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 no-underline">
+        <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="decipher-logo" aria-hidden="true">
           <defs>
             <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="var(--logo-c1,#06b6d4)"/>
-              <stop offset="100%" stop-color="var(--logo-c2,#0369a1)"/>
+              <stop offset="0%" stop-color="var(--logo-c1,#fff)"/>
+              <stop offset="100%" stop-color="var(--logo-c2,rgba(255,255,255,0.5))"/>
             </linearGradient>
           </defs>
-          <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
-          <rect x="5" y="17.5" width="26" height="1" rx="0.5" fill="rgba(255,255,255,0.22)"/>
-          <path d="M5 12 L5 5 L12 5" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M31 12 L31 5 L24 5" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M5 24 L5 31 L12 31" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M31 24 L31 31 L24 31" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <rect width="36" height="36" rx="9" fill="url(#logoGrad)" fill-opacity="0.15"/>
+          <rect x="5" y="17.5" width="26" height="1" rx="0.5" fill="rgba(255,255,255,0.3)"/>
+          <path d="M5 12 L5 5 L12 5" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M31 12 L31 5 L24 5" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M5 24 L5 31 L12 31" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M31 24 L31 31 L24 31" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
           <text x="9" y="26" font-family="Arial Black,sans-serif" font-size="20" font-weight="900" fill="white">D</text>
         </svg>
-        <span style="font-family:'Instrument Serif',serif;font-style:italic;font-weight:600;font-size:24px;letter-spacing:-0.5px;">Decipher</span>
-      </div>
-      <div class="flex items-center gap-6">
-        <a href="#upload">Upload</a>
-        <a href="#analyzer">Analyzer</a>
-        <a href="#library">Library</a>
-        <div class="theme-switcher">
-          <button class="theme-btn active" data-theme="dark" id="themeDark" title="Cyber Dark">🌑</button>
-          <button class="theme-btn" data-theme="light" id="themeLight" title="Ice Latte">☀️</button>
-          <button class="theme-btn" data-theme="red" id="themeRed" title="Matte Red">🔴</button>
+        <span class="nav-brand">Decipher<sup class="text-xs" style="font-size:9px;opacity:0.6;">®</sup></span>
+      </a>
+
+      <!-- Desktop pill nav -->
+      <div class="nav-pill hidden md:flex items-center gap-1 liquid-glass rounded-full px-1.5 py-1.5">
+        <a href="#" class="nav-link nav-link-active">Home</a>
+        <a href="#analyzer" class="nav-link">Analyzer</a>
+        <a href="#library" class="nav-link">Library</a>
+        <div class="nav-divider"></div>
+        <!-- Theme switcher in pill -->
+        <div class="theme-switcher-pill">
+          <button class="theme-btn-sm active" data-theme="dark" id="themeDark" title="Cyber Dark">🌑</button>
+          <button class="theme-btn-sm" data-theme="light" id="themeLight" title="Stone Latte">☀️</button>
+          <button class="theme-btn-sm" data-theme="red" id="themeRed" title="Matte Red">🔴</button>
         </div>
-        <div class="flex items-center gap-3 pl-4" style="border-left:1px solid var(--border);">
-          <span id="userNameDisplay" style="font-size:12px;color:var(--accent);font-weight:600;display:none;"></span>
-          <button id="authBtn" class="nav-auth-btn">Log In</button>
-        </div>
+        <div class="nav-divider"></div>
+        <!-- Auth in pill -->
+        <span id="userNameDisplay" class="nav-user-name"></span>
+        <button id="authBtn" class="nav-cta-btn">Log In</button>
       </div>
+
+      <!-- Mobile: auth only -->
+      <button id="authBtnMobile" class="md:hidden liquid-glass rounded-full px-4 py-2 nav-link" style="display:none !important;">Log In</button>
     </div>
   </nav>
 
   <!-- ════════════════════════════════════════
-       CINEMATIC HERO
+       CINEMATIC HERO — Fullscreen video
   ════════════════════════════════════════ -->
   <section class="hero-cinematic" id="heroSection">
-    <!-- Background video layer -->
-    <video autoPlay loop muted playsInline class="hero-bg-video">
-      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4" type="video/mp4">
+
+    <!-- Fullscreen video background -->
+    <video autoplay loop muted playsinline class="hero-bg-video">
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4" type="video/mp4">
     </video>
-    <!-- Dark overlay gradient -->
-    <div class="hero-overlay"></div>
 
-    <!-- Floating vocabulary words at 3 depth levels -->
-    <div class="hero-float-words" id="heroWords">
-      <span class="float-word fd1" style="top:14%;left:7%;">paradigm</span>
-      <span class="float-word fd2" style="top:68%;right:9%;">ephemeral</span>
-      <span class="float-word fd3" style="top:28%;right:8%;">eloquent</span>
-      <span class="float-word fd1" style="top:58%;left:6%;">pedagogy</span>
-      <span class="float-word fd2" style="top:38%;right:18%;">cognition</span>
-      <span class="float-word fd3" style="top:78%;left:22%;">synthesis</span>
-      <span class="float-word fd1" style="top:48%;left:16%;">nuanced</span>
-      <span class="float-word fd2" style="top:82%;right:28%;">proliferate</span>
-      <span class="float-word fd3" style="top:20%;left:30%;">unprecedented</span>
-      <span class="float-word fd1" style="top:90%;left:45%;">sophisticated</span>
-    </div>
+    <!-- Subtle dark vignette over video -->
+    <div class="hero-vignette"></div>
 
-    <!-- Scanner reticle (decorative) -->
-    <div class="hero-reticle" id="heroReticle">
-      <div class="reticle-ring r1"></div>
-      <div class="reticle-ring r2"></div>
-      <div class="reticle-corner rc-tl"></div>
-      <div class="reticle-corner rc-tr"></div>
-      <div class="reticle-corner rc-bl"></div>
-      <div class="reticle-corner rc-br"></div>
-      <div class="reticle-cross-h"></div>
-      <div class="reticle-cross-v"></div>
-    </div>
+    <!-- Hero content (z-10, centered) -->
+    <div class="hero-content">
 
-    <!-- Central hero content -->
-    <div class="hero-content" id="heroContent">
-      <div class="hero-badge">✦ Powered by Gemini 2.5 Flash</div>
-      <h1 class="hero-title">
-        Decipher Any Text.<br>
-        <span class="hero-gradient-text">Master Every Word.</span>
+      <!-- Heading -->
+      <h1 class="hero-title animate-fade-rise">
+        Where <em class="hero-em">words unlock</em><br>
+        <em class="hero-em">worlds</em> of meaning.
       </h1>
-      <p class="hero-desc">Upload a PDF or paste any passage. AI extracts vocabulary, translates it to your native language, and quizzes you until every word is locked in memory.</p>
-      <div class="hero-actions">
-        <a href="#upload" class="btn-primary liquid-glass-strong" style="font-size:15px;padding:14px 34px;text-decoration:none;">Start Deciphering →</a>
-        <a href="#library" class="hero-ghost-link">View Library</a>
+
+      <!-- Subtext -->
+      <p class="hero-desc animate-fade-rise-delay">
+        Upload any passage, PDF, or image. AI extracts vocabulary,
+        defines it in context, translates it to 51 languages,
+        and quizzes you until every word sticks — for good.
+      </p>
+
+      <!-- CTA buttons -->
+      <div class="hero-actions animate-fade-rise-delay-2">
+        <a href="#analyzer" class="hero-cta-primary liquid-glass rounded-full">Start Deciphering →</a>
+        <a href="#library" class="hero-cta-ghost">View Library</a>
       </div>
+
       <!-- Stats bar -->
-      <div class="hero-stats">
+      <div class="hero-stats animate-fade-rise-delay-2">
         <div class="hero-stat"><span class="stat-n">51</span><span class="stat-l">Languages</span></div>
         <div class="stat-divider"></div>
         <div class="hero-stat"><span class="stat-n">3</span><span class="stat-l">Quiz Modes</span></div>
         <div class="stat-divider"></div>
         <div class="hero-stat"><span class="stat-n">AI</span><span class="stat-l">Memory Hooks</span></div>
         <div class="stat-divider"></div>
-        <div class="hero-stat"><span class="stat-n">ELI5</span><span class="stat-l">Simplify Mode</span></div>
+        <div class="hero-stat"><span class="stat-n">OCR</span><span class="stat-l">Image Input</span></div>
       </div>
     </div>
 
