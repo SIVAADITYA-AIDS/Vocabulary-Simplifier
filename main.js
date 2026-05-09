@@ -400,18 +400,64 @@ sampleBtn.addEventListener('click', () => {
 // ======================
 (function initTheme() {
   const saved = localStorage.getItem('decipher-theme') || 'dark';
-  document.documentElement.className = 'theme-' + saved;
-  const btn = document.getElementById('theme' + saved.charAt(0).toUpperCase() + saved.slice(1));
-  if (btn) btn.classList.add('active');
-  document.querySelectorAll('.theme-btn').forEach(b => {
+  // Use data-theme attribute so we never wipe other html classes
+  document.documentElement.setAttribute('data-theme', saved);
+  // Mark active button — covers both .theme-btn and .theme-btn-sm
+  document.querySelectorAll('.theme-btn, .theme-btn-sm').forEach(b => {
+    if (b.dataset.theme === saved) b.classList.add('active');
+  });
+  document.querySelectorAll('.theme-btn, .theme-btn-sm').forEach(b => {
     b.addEventListener('click', () => {
       const t = b.dataset.theme;
-      document.documentElement.className = 'theme-' + t;
-      document.querySelectorAll('.theme-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+      document.documentElement.setAttribute('data-theme', t);
+      document.querySelectorAll('.theme-btn, .theme-btn-sm').forEach(x => x.classList.remove('active'));
+      // Activate all buttons sharing this theme (desktop + mobile copies)
+      document.querySelectorAll(`.theme-btn[data-theme="${t}"], .theme-btn-sm[data-theme="${t}"]`)
+        .forEach(x => x.classList.add('active'));
       localStorage.setItem('decipher-theme', t);
     });
   });
+})();
+
+// Nav scroll: add .scrolled class so backdrop darkens slightly after hero
+(function initNavScroll() {
+  const nav = document.getElementById('mainNav');
+  if (!nav) return;
+  
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+  
+  const onScroll = () => {
+    // 1. Darken nav when scrolled
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+    
+    // 2. Scroll Spy (Highlight active nav link)
+    let current = '';
+    // If we haven't scrolled past the hero section, 'Home' is active
+    if (window.scrollY < 400) {
+      current = 'home';
+    } else {
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (window.scrollY >= (sectionTop - 150)) {
+          current = section.getAttribute('id');
+        }
+      });
+    }
+
+    navLinks.forEach(link => {
+      link.classList.remove('nav-link-active');
+      const href = link.getAttribute('href');
+      if (current === 'home' && href === '#') {
+        link.classList.add('nav-link-active');
+      } else if (current && href === `#${current}`) {
+        link.classList.add('nav-link-active');
+      }
+    });
+  };
+  
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll(); // run once on load
 })();
 
 // ======================
